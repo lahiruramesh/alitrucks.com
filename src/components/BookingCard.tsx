@@ -132,7 +132,7 @@ export default function BookingCard({ truck }: BookingCardProps) {
 
         {/* Reserve Button */}
         <Button 
-          className="w-full bg-[#FF385C] hover:bg-[#E02748] text-white h-12 mb-4"
+          className="w-full bg-green-500 hover:bg-green-600 text-white h-12 mb-4"
           disabled={!checkIn || !checkOut}
         >
           Reserve

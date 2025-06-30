@@ -1,119 +1,207 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { Menu, Search, User, MapPin, Calendar, Users } from 'lucide-react'
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Menu, Search, User, MapPin, Calendar, Users, LogOut, Settings, Shield, X } from 'lucide-react'
+import { useAuthContext } from '@/components/auth/AuthProvider'
+import { auth, getRoleBasedRedirectUrl } from '@/lib/auth'
 
-export default function Navigation() {
+export default function NavigationFixed() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
+  const { user, profile, isAuthenticated } = useAuthContext()
+
+  // Handle scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const handleSignOut = async () => {
+    try {
+      await auth.signOut()
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Sign out error:', error)
+    }
+  }
+
+  const getUserDisplayName = () => {
+    return profile?.full_name || user?.email || 'Account'
+  }
+
+  const getUserInitials = () => {
+    const name = profile?.full_name || user?.email || 'U'
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
+
+  const getDashboardLink = () => {
+    if (!profile) return '/'
+    return getRoleBasedRedirectUrl(profile.role)
+  }
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled 
+          ? 'bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm' 
+          : 'bg-white border-b border-gray-200'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <div className="flex items-center">
-              <div className="text-2xl font-bold text-[#FF385C]">
+              <Link href="/" className="text-2xl font-bold text-green-500">
                 AliTrucks
-              </div>
-            </div>
-
-            {/* Search Bar - Always visible */}
-            <div 
-              className="hidden md:flex items-center bg-white border border-gray-300 rounded-full shadow-sm hover:shadow-md transition-all duration-200 px-6 py-2 cursor-pointer min-w-[300px]"
-              onClick={() => {
-                // Scroll to top to show the main search bar
-                window.scrollTo({ top: 0, behavior: 'smooth' })
-              }}
-            >
-              <div className="flex items-center space-x-4">
-                <div className="text-sm font-medium text-gray-900">Anywhere</div>
-                <div className="w-px h-6 bg-gray-300"></div>
-                <div className="text-sm font-medium text-gray-900">Any week</div>
-                <div className="w-px h-6 bg-gray-300"></div>
-                <div className="text-sm text-gray-500">Add guests</div>
-              </div>
+              </Link>
             </div>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              <a href="/" className="text-gray-900 hover:text-[#FF385C] font-medium">
+              <Link href="/" className="text-gray-900 hover:text-green-500 font-medium transition-colors">
                 Browse Trucks
-              </a>
-              <a href="/about" className="text-gray-500 hover:text-gray-900">
+              </Link>
+              <Link href="/about" className="text-gray-500 hover:text-gray-900 transition-colors">
                 How it works
-              </a>
-              <a href="/business" className="text-gray-500 hover:text-gray-900">
-                For Business
-              </a>
+              </Link>
+              <Link href="/contact" className="text-gray-500 hover:text-gray-900 transition-colors">
+                Support
+              </Link>
             </div>
 
-            {/* Right Side - Desktop */}
-            <div className="hidden md:flex items-center space-x-4">
-              <Button variant="ghost" size="sm" className="text-gray-900 hover:bg-gray-100">
-                List your truck
-              </Button>
-              <div className="flex items-center space-x-2 bg-white border border-gray-300 rounded-full p-2 hover:shadow-md transition-shadow">
-                <Menu className="w-4 h-4 text-gray-500" />
-                <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-white" />
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Menu Button */}
-            <div className="md:hidden">
-              <Sheet open={isOpen} onOpenChange={setIsOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <Menu className="w-6 h-6" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-80">
-                  <div className="flex flex-col space-y-6 mt-6">
-                    <a href="/" className="text-lg font-medium text-gray-900">
-                      Browse Trucks
-                    </a>
-                    <a href="/about" className="text-lg text-gray-500">
-                      How it works
-                    </a>
-                    <a href="/business" className="text-lg text-gray-500">
-                      For Business
-                    </a>
-                    <hr className="border-gray-200" />
-                    <a href="/list" className="text-lg text-gray-900">
-                      List your truck
-                    </a>
-                    <a href="/login" className="text-lg text-gray-900">
+            {/* Right Side Actions */}
+            <div className="flex items-center space-x-4">
+              {/* Auth Actions */}
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                      <Avatar className="h-10 w-10">
+                        {profile?.avatar_url ? (
+                          <AvatarImage src={profile.avatar_url} alt="User Avatar" />
+                        ) : (
+                          <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                        )}
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <div className="flex flex-col space-y-1 p-2">
+                      <p className="text-sm font-medium leading-none">{getUserDisplayName()}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground capitalize">
+                        {profile?.role} Account
+                      </p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href={getDashboardLink()}>
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Profile Settings</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sign out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <>
+                  <Link href="/auth/login">
+                    <Button variant="ghost">
                       Log in
-                    </a>
-                    <a href="/signup" className="text-lg text-gray-900">
+                    </Button>
+                  </Link>
+                  <Link href="/auth/register">
+                    <Button>
                       Sign up
-                    </a>
-                  </div>
-                </SheetContent>
-              </Sheet>
+                    </Button>
+                  </Link>
+                </>
+              )}
+
+              {/* Mobile Menu */}
+              <div className="md:hidden">
+                <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative">
+                      <Menu className={`h-6 w-6 transition-all duration-300 ${isOpen ? 'opacity-0 rotate-90' : 'opacity-100 rotate-0'}`} />
+                      <X className={`h-6 w-6 absolute transition-all duration-300 ${isOpen ? 'opacity-100 rotate-0' : 'opacity-0 -rotate-90'}`} />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                    <nav className="flex flex-col space-y-4 mt-8">
+                      <Link 
+                        href="/" 
+                        className="text-lg font-medium hover:text-green-500 transition-colors py-2"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        Browse Trucks
+                      </Link>
+                      <Link 
+                        href="/about" 
+                        className="text-lg font-medium hover:text-green-500 transition-colors py-2"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        How it works
+                      </Link>
+                      <Link 
+                        href="/contact" 
+                        className="text-lg font-medium hover:text-green-500 transition-colors py-2"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        Support
+                      </Link>
+                      
+                      {!isAuthenticated && (
+                        <>
+                          <hr className="my-4" />
+                          <Link href="/auth/login" onClick={() => setIsOpen(false)}>
+                            <Button variant="outline" className="w-full">
+                              Log in
+                            </Button>
+                          </Link>
+                          <Link href="/auth/register" onClick={() => setIsOpen(false)}>
+                            <Button className="w-full">
+                              Sign up
+                            </Button>
+                          </Link>
+                        </>
+                      )}
+                    </nav>
+                  </SheetContent>
+                </Sheet>
+              </div>
             </div>
           </div>
         </div>
       </nav>
-      
-      {/* Mobile Search - Always visible */}
-      <div className="md:hidden fixed top-20 left-4 right-4 z-40">
-        <div 
-          className="bg-white border border-gray-300 rounded-full shadow-lg p-4 cursor-pointer"
-          onClick={() => {
-            // Scroll to top to show the main search bar
-            window.scrollTo({ top: 0, behavior: 'smooth' })
-          }}
-        >
-          <div className="flex items-center justify-between">
-            
-          </div>
-        </div>
-      </div>
+
+      {/* Spacer to prevent content from being hidden behind fixed nav */}
+      <div className="h-20" />
     </>
   )
 }

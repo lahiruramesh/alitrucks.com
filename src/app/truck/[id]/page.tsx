@@ -118,7 +118,7 @@ export default async function TruckDetailPage({
                 <MapPin className="w-4 h-4 mr-1" />
                 {truck.location}
               </div>
-              <Badge className="bg-[#FF385C] text-white">
+              <Badge className="bg-green-500 text-white">
                 <Zap className="w-3 h-3 mr-1" />
                 Electric
               </Badge>

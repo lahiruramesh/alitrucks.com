@@ -2,114 +2,259 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant public (&:is(.public *));
+@custom-variant admin (&:is(.admin *));
+
+/* ==================== ALITRUCKS DESIGN SYSTEM ==================== */
+/* Based on design_system.md - Sustainability-focused themes for public and admin apps */
 
 @theme inline {
+  /* Core Design System Colors - Sustainability Palette */
+  --color-sustainability-green-50: 240 253 244;   /* #F0FDF4 */
+  --color-sustainability-green-100: 220 252 231;  /* #DCFCE7 */
+  --color-sustainability-green-200: 187 247 208;  /* #BBF7D0 */
+  --color-sustainability-green-300: 134 239 172;  /* #86EFAC */
+  --color-sustainability-green-400: 74 222 128;   /* #4ADE80 */
+  --color-sustainability-green-500: 34 197 94;    /* #22C55E - Main sustainability green */
+  --color-sustainability-green-600: 22 163 74;    /* #16A34A */
+  --color-sustainability-green-700: 21 128 61;    /* #15803D */
+  --color-sustainability-green-800: 22 101 52;    /* #166534 */
+  --color-sustainability-green-900: 20 83 45;     /* #14532D */
+
+  --color-sustainability-electric-50: 240 249 255;   /* #F0F9FF */
+  --color-sustainability-electric-100: 224 242 254;  /* #E0F2FE */
+  --color-sustainability-electric-200: 186 230 253;  /* #BAE6FD */
+  --color-sustainability-electric-300: 125 211 252;  /* #7DD3FC */
+  --color-sustainability-electric-400: 56 189 248;   /* #38BDF8 */
+  --color-sustainability-electric-500: 14 165 233;   /* #0EA5E9 - Electric blue */
+  --color-sustainability-electric-600: 2 132 199;    /* #0284C7 */
+  --color-sustainability-electric-700: 3 105 161;    /* #0369A1 */
+  --color-sustainability-electric-800: 7 89 133;     /* #075985 */
+  --color-sustainability-electric-900: 12 74 110;    /* #0C4A6E */
+
+  /* State Colors */
+  --color-state-success: var(--color-sustainability-green-500);
+  --color-state-warning: 245 158 11;  /* #F59E0B */
+  --color-state-danger: 239 68 68;    /* #EF4444 */
+  --color-state-info: var(--color-sustainability-electric-500);
+
+  /* Public App Theme Colors (Sustainability Focus) */
+  --color-public-primary: var(--color-sustainability-green-500);
+  --color-public-primary-hover: var(--color-sustainability-green-600);
+  --color-public-primary-soft: var(--color-sustainability-green-100);
+  --color-public-secondary: var(--color-sustainability-electric-500);
+  --color-public-secondary-hover: var(--color-sustainability-electric-600);
+  --color-public-secondary-soft: var(--color-sustainability-electric-100);
+  --color-public-background: 255 255 255;
+  --color-public-surface: 255 255 255;      /* Changed from #F8FAFC to white */
+  --color-public-border: 0 0 0 / 0;         /* Transparent borders */
+  --color-public-text-primary: 30 41 59;    /* #1E293B */
+  --color-public-text-secondary: 100 116 139; /* #64748B */
+  --color-public-text-muted: 148 163 184;   /* #94A3B8 */
+
+  /* Admin App Theme Colors (Professional Focus) */
+  --color-admin-primary: 15 23 42;          /* #0F172A - Dark slate */
+  --color-admin-primary-hover: 30 41 59;    /* #1E293B */
+  --color-admin-primary-soft: 241 245 249;  /* #F1F5F9 */
+  --color-admin-secondary: var(--color-sustainability-green-500);
+  --color-admin-secondary-hover: var(--color-sustainability-green-600);
+  --color-admin-secondary-soft: var(--color-sustainability-green-100);
+  --color-admin-background: 255 255 255;
+  --color-admin-surface: 255 255 255;       /* Changed from #F8FAFC to white */
+  --color-admin-surface-dark: 255 255 255;  /* Changed from #F1F5F9 to white */
+  --color-admin-border: 0 0 0 / 0;          /* Transparent borders */
+  --color-admin-border-dark: 0 0 0 / 0;     /* Transparent borders */
+  --color-admin-text-primary: 15 23 42;     /* #0F172A */
+  --color-admin-text-secondary: 71 85 105;  /* #475569 */
+  --color-admin-text-muted: 100 116 139;    /* #64748B */
+  --color-admin-sidebar: 255 255 255;
+  --color-admin-sidebar-border: 0 0 0 / 0;  /* Transparent sidebar borders */
+
+  /* Theme-aware Color Mappings */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  /* Sidebar specific colors */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Chart colors */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Radius tokens */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /* Default radius */
+  --radius: var(--radius-md);
+
+  /* Font family tokens */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }
+
+/* ==================== ROOT THEME CONFIGURATIONS ==================== */
 
 :root {
+  /* Default theme - Public App (Sustainability Focus) */
   --radius: 0.5rem;
-  --background: 255 255 255;
-  --foreground: 34 34 34;
-  --card: 255 255 255;
-  --card-foreground: 34 34 34;
-  --popover: 255 255 255;
-  --popover-foreground: 34 34 34;
-  --primary: 255 56 92;
+  
+  /* Public App Colors */
+  --background: var(--color-public-background);
+  --foreground: var(--color-public-text-primary);
+  --card: var(--color-public-background);
+  --card-foreground: var(--color-public-text-primary);
+  --popover: var(--color-public-background);
+  --popover-foreground: var(--color-public-text-primary);
+  --primary: var(--color-public-primary);
   --primary-foreground: 255 255 255;
-  --secondary: 34 34 34;
+  --secondary: var(--color-public-secondary);
   --secondary-foreground: 255 255 255;
-  --muted: 247 247 247;
-  --muted-foreground: 113 113 113;
-  --accent: 255 56 92;
+  --muted: var(--color-public-surface);
+  --muted-foreground: var(--color-public-text-muted);
+  --accent: var(--color-public-primary);
   --accent-foreground: 255 255 255;
-  --destructive: 217 57 0;
-  --border: 221 221 221;
-  --input: 221 221 221;
-  --ring: 255 56 92;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --destructive: var(--color-state-danger);
+  --destructive-foreground: 255 255 255;
+  --border: 226 232 240; /* Light gray border for visibility */
+  --input: 226 232 240; /* Light gray input border */
+  --ring: var(--color-public-primary);
+  
+  /* Chart colors for public app */
+  --chart-1: var(--color-sustainability-green-500);
+  --chart-2: var(--color-sustainability-electric-500);
+  --chart-3: var(--color-sustainability-green-300);
+  --chart-4: var(--color-sustainability-electric-300);
+  --chart-5: var(--color-sustainability-green-700);
+  
+  /* Sidebar for public app (if needed) */
+  --sidebar: var(--color-public-background);
+  --sidebar-foreground: var(--color-public-text-primary);
+  --sidebar-primary: var(--color-public-primary);
+  --sidebar-primary-foreground: 255 255 255;
+  --sidebar-accent: var(--color-public-surface);
+  --sidebar-accent-foreground: var(--color-public-text-primary);
+  --sidebar-border: var(--color-public-border);
+  --sidebar-ring: var(--color-public-primary);
 }
 
+/* Admin App Theme */
+.admin {
+  /* Admin App Colors */
+  --background: var(--color-admin-background);
+  --foreground: var(--color-admin-text-primary);
+  --card: var(--color-admin-background);
+  --card-foreground: var(--color-admin-text-primary);
+  --popover: var(--color-admin-background);
+  --popover-foreground: var(--color-admin-text-primary);
+  --primary: var(--color-admin-primary);
+  --primary-foreground: 255 255 255;
+  --secondary: var(--color-admin-secondary);
+  --secondary-foreground: 255 255 255;
+  --muted: var(--color-admin-surface);
+  --muted-foreground: var(--color-admin-text-muted);
+  --accent: var(--color-admin-secondary);
+  --accent-foreground: 255 255 255;
+  --destructive: var(--color-state-danger);
+  --destructive-foreground: 255 255 255;
+  --border: 226 232 240; /* Light gray border for visibility */
+  --input: 226 232 240; /* Light gray input border */
+  --ring: var(--color-admin-secondary);
+  
+  /* Chart colors for admin app */
+  --chart-1: var(--color-admin-primary);
+  --chart-2: var(--color-admin-secondary);
+  --chart-3: var(--color-admin-surface-dark);
+  --chart-4: var(--color-sustainability-electric-400);
+  --chart-5: var(--color-sustainability-green-600);
+  
+  /* Sidebar for admin app */
+  --sidebar: var(--color-admin-sidebar);
+  --sidebar-foreground: var(--color-admin-text-primary);
+  --sidebar-primary: var(--color-admin-secondary);
+  --sidebar-primary-foreground: 255 255 255;
+  --sidebar-accent: var(--color-admin-surface);
+  --sidebar-accent-foreground: var(--color-admin-text-primary);
+  --sidebar-border: var(--color-admin-sidebar-border);
+  --sidebar-ring: var(--color-admin-secondary);
+}
+
+/* Public App Specific Theme */
+.public {
+  /* Public app uses the default root theme configuration */
+  /* Additional sustainability-focused styling can be added here */
+  --brand-motto: "Clean Energy, Cleaner Future";
+}
+
+/* Dark theme support for both apps */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(89.071% 0.2306 141.767);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: 9 9 11;           /* zinc-900 */
+  --foreground: 250 250 250;      /* zinc-50 */
+  --card: 9 9 11;                 /* zinc-900 */
+  --card-foreground: 250 250 250; /* zinc-50 */
+  --popover: 9 9 11;              /* zinc-900 */
+  --popover-foreground: 250 250 250; /* zinc-50 */
+  --primary: var(--color-sustainability-green-400);
+  --primary-foreground: 9 9 11;   /* zinc-900 */
+  --secondary: 39 39 42;          /* zinc-800 */
+  --secondary-foreground: 250 250 250; /* zinc-50 */
+  --muted: 39 39 42;              /* zinc-800 */
+  --muted-foreground: 161 161 170; /* zinc-400 */
+  --accent: 39 39 42;             /* zinc-800 */
+  --accent-foreground: 250 250 250; /* zinc-50 */
+  --destructive: 220 38 38;       /* red-600 */
+  --destructive-foreground: 250 250 250; /* zinc-50 */
+  --border: 39 39 42;             /* zinc-800 */
+  --input: 39 39 42;              /* zinc-800 */
+  --ring: var(--color-sustainability-green-400);
+  
+  /* Dark chart colors */
+  --chart-1: var(--color-sustainability-green-400);
+  --chart-2: var(--color-sustainability-electric-400);
+  --chart-3: var(--color-sustainability-green-300);
+  --chart-4: var(--color-sustainability-electric-300);
+  --chart-5: var(--color-sustainability-green-500);
+  
+  /* Dark sidebar */
+  --sidebar: 9 9 11;              /* zinc-900 */
+  --sidebar-foreground: 250 250 250; /* zinc-50 */
+  --sidebar-primary: var(--color-sustainability-green-400);
+  --sidebar-primary-foreground: 9 9 11; /* zinc-900 */
+  --sidebar-accent: 39 39 42;     /* zinc-800 */
+  --sidebar-accent-foreground: 250 250 250; /* zinc-50 */
+  --sidebar-border: 39 39 42;     /* zinc-800 */
+  --sidebar-ring: var(--color-sustainability-green-400);
 }
 
 @layer base {
@@ -127,20 +272,20 @@
   [data-radix-popper-content-wrapper] {
     z-index: 50;
   }
-  
-  /* Dialog overlay styling - Force dark background with highest priority */
+
+  /* Dialog overlay styling - Lighter transparent background for better visibility */
   [data-radix-dialog-overlay],
   [data-radix-portal] [data-radix-dialog-overlay],
   .rdp-overlay {
-    background-color: rgba(0, 0, 0, 0.75) !important;
-    backdrop-filter: blur(4px) !important;
+    background-color: rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(1px) !important;
     position: fixed !important;
     inset: 0 !important;
     z-index: 999 !important;
     animation: fadeIn 0.2s ease-out !important;
   }
-  
-  /* Dialog content styling */
+
+  /* Dialog content styling - Ensure excellent visibility */
   [data-radix-dialog-content] {
     position: fixed !important;
     left: 50% !important;
@@ -149,46 +294,49 @@
     transform: translate(-50%, -50%) !important;
     background: white !important;
     border-radius: 12px !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4) !important;
     animation: slideIn 0.2s ease-out !important;
-    border: none !important;
+    border: 2px solid #e5e7eb !important;
+    max-width: calc(100vw - 2rem) !important;
+    max-height: calc(100vh - 2rem) !important;
+    overflow-y: auto !important;
   }
-  
-  /* Sheet overlay */
+
+  /* Sheet overlay - Lighter transparent for better visibility */
   [data-radix-sheet-overlay] {
-    background-color: rgba(0, 0, 0, 0.8) !important;
-    backdrop-filter: blur(4px) !important;
+    background-color: rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(1px) !important;
     position: fixed !important;
     inset: 0 !important;
     z-index: 999 !important;
   }
-  
-  /* Ensure all modals and dialogs have proper background */
+
+  /* Ensure all modals and dialogs have proper lighter background */
   [data-state="open"][data-radix-dialog-overlay] {
-    background: rgba(0, 0, 0, 0.75) !important;
+    background: rgba(0, 0, 0, 0.3) !important;
   }
-  
-  /* Force backdrop for any modal-like components */
+
+  /* Force proper backdrop for any modal-like components */
   .modal-backdrop,
   [role="dialog"]::backdrop,
   [data-radix-portal]::backdrop {
-    background: rgba(0, 0, 0, 0.75) !important;
-    backdrop-filter: blur(4px) !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(1px) !important;
   }
-  
+
   /* Calendar container fixes */
   [data-radix-dialog-content] .rdp {
     background: white !important;
     border: none !important;
     box-shadow: none !important;
   }
-  
+
   /* Animation keyframes */
   @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
   }
-  
+
   @keyframes slideIn {
     from { 
       opacity: 0; 
@@ -199,14 +347,32 @@
       transform: translate(-50%, -50%) scale(1);
     }
   }
-  
+
   /* Additional calendar specific fixes */
   .rdp {
     background: white;
     border-radius: 8px;
     padding: 16px;
   }
+
+  /* Force white background for select components */
+  [data-slot="select-content"] {
+    background: white !important;
+    z-index: 9999 !important;
+  }
   
+  [data-slot="select-item"] {
+    background: white !important;
+  }
+  
+  [data-slot="select-item"]:hover {
+    background: #f8fafc !important;
+  }
+  
+  [data-slot="select-item"][data-state="checked"] {
+    background: #f1f5f9 !important;
+  }
+
   /* Smooth scrolling for compact search bar */
   html {
     scroll-behavior: smooth;

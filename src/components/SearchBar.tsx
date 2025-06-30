@@ -50,8 +50,8 @@ export default function SearchBar() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="bg-white rounded-full shadow-lg border border-gray-200 p-2 hover:shadow-xl transition-shadow duration-200">
-        <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-300">
+      <div className="bg-white rounded-full shadow-lg p-2 hover:shadow-xl transition-shadow duration-200">
+        <div className="flex flex-col md:flex-row md:items-center">
           
           {/* Location */}
           <div className="flex-1 p-4 md:p-6">
@@ -237,7 +237,7 @@ export default function SearchBar() {
           <div className="p-2">
             <Button
               onClick={handleSearch}
-              className="bg-[#FF385C] hover:bg-[#E31C5F] text-white rounded-full px-8 py-4 md:px-6 md:py-3 flex items-center space-x-2 shadow-md hover:shadow-lg transition-all duration-200"
+              className="bg-green-500 hover:bg-green-600 text-white rounded-full px-8 py-4 md:px-6 md:py-3 flex items-center space-x-2 shadow-md hover:shadow-lg transition-all duration-200"
             >
               <Search className="w-4 h-4" />
               <span className="hidden md:inline">Search</span>
