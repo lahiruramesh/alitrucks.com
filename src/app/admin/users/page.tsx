@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,11 +35,9 @@ import {
 import { 
   Search, 
   Plus, 
-  Edit, 
   Shield, 
   User, 
   ShoppingCart,
-  MoreHorizontal,
   CheckCircle,
   XCircle
 } from 'lucide-react'
@@ -65,12 +63,7 @@ export default function AdminUsersPage() {
     phone: '',
   })
 
-  // Fetch users
-  useEffect(() => {
-    fetchUsers()
-  }, [])
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true)
       let query = supabase
@@ -86,12 +79,17 @@ export default function AdminUsersPage() {
 
       if (error) throw error
       setUsers(data || [])
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedRole])
+
+  // Fetch users
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
 
   const updateUserRole = async (userId: string, newRole: UserRole) => {
     try {
@@ -107,8 +105,8 @@ export default function AdminUsersPage() {
         user.id === userId ? { ...user, role: newRole } : user
       ))
       setSuccessMessage('User role updated successfully')
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
     }
   }
 
@@ -126,8 +124,8 @@ export default function AdminUsersPage() {
         user.id === userId ? { ...user, is_active: !isActive } : user
       ))
       setSuccessMessage(`User ${isActive ? 'deactivated' : 'activated'} successfully`)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
     }
   }
 
@@ -179,9 +177,9 @@ export default function AdminUsersPage() {
       // Refresh users list
       await fetchUsers()
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating user:', err)
-      setError(err.message || 'Failed to create user')
+      setError(err instanceof Error ? err.message : 'Failed to create user')
     } finally {
       setAddUserLoading(false)
     }

@@ -18,7 +18,7 @@ export default function BuyerMessagesPage() {
     setShowNewConversation(true)
   }
 
-  const handleConversationCreated = (conversation: any) => {
+  const handleConversationCreated = (conversation: { id: number }) => {
     setSelectedConversationId(conversation.id)
     setShowNewConversation(false)
   }

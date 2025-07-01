@@ -51,7 +51,7 @@ export const auth = {
   },
 
   // Get user profile with role
-  async getUserProfile(userId: string): Promise<{ data: UserProfile | null, error: any }> {
+  async getUserProfile(userId: string): Promise<{ data: UserProfile | null, error: unknown }> {
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')

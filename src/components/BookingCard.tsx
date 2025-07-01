@@ -139,7 +139,7 @@ export default function BookingCard({ truck }: BookingCardProps) {
         </Button>
 
         <p className="text-center text-sm text-gray-500 mb-4">
-          You won't be charged yet
+          You won&apos;t be charged yet
         </p>
 
         {/* Price Breakdown */}

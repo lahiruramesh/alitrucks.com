@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuthContext } from '@/components/auth/AuthProvider'
 
@@ -15,7 +15,7 @@ export function useUnreadMessages(): UseUnreadMessages {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     if (!initialized || !user) {
       setUnreadCount(0)
       setLoading(false)
@@ -39,13 +39,13 @@ export function useUnreadMessages(): UseUnreadMessages {
       }
 
       setUnreadCount(count || 0)
-    } catch (err: any) {
-      console.error('Failed to load unread count:', err.message)
+    } catch (err: unknown) {
+      console.error('Failed to load unread count:', err instanceof Error ? err.message : 'Unknown error')
       setUnreadCount(0)
     } finally {
       setLoading(false)
     }
-  }
+  }, [initialized, user])
 
   useEffect(() => {
     if (!initialized) {
@@ -84,7 +84,7 @@ export function useUnreadMessages(): UseUnreadMessages {
     return () => {
       subscription.unsubscribe()
     }
-  }, [user, initialized])
+  }, [user, initialized, fetchUnreadCount])
 
   return {
     unreadCount,

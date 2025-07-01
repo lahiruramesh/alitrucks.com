@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,18 +18,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { 
   Send, 
   Paperclip, 
-  Phone, 
   X,
   MessageCircle,
   Clock,
   CheckCircle2,
-  AlertCircle,
   Plus
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthContext } from '@/components/auth/AuthProvider'
 import { cn } from '@/lib/utils'
-import { TypingIndicator } from './TypingIndicator'
+import Image from 'next/image'
 import { FileUpload } from './FileUpload'
 import { MessageActions } from './MessageActions'
 
@@ -123,8 +121,6 @@ export default function ChatInterface({ conversationId, userRole, onConversation
   const [error, setError] = useState<string | null>(null)
   const [showNewConversation, setShowNewConversation] = useState(!conversationId)
   const [attachments, setAttachments] = useState<FileAttachment[]>([])
-  const [isTyping, setIsTyping] = useState(false)
-  const [otherUserTyping, setOtherUserTyping] = useState(false)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   
   // New conversation form
@@ -137,27 +133,7 @@ export default function ChatInterface({ conversationId, userRole, onConversation
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (conversationId) {
-      fetchConversation()
-      fetchMessages()
-      // Set up real-time subscription
-      const subscription = supabase
-        .channel(`conversation-${conversationId}`)
-        .on('postgres_changes', 
-          { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
-          (payload) => {
-            fetchMessages()
-          }
-        )
-        .subscribe()
-
-      return () => {
-        subscription.unsubscribe()
-      }
-    }
-  }, [conversationId])
-
+  // Set up scroll behavior
   useEffect(() => {
     scrollToBottom()
   }, [messages])
@@ -166,7 +142,7 @@ export default function ChatInterface({ conversationId, userRole, onConversation
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const fetchConversation = async () => {
+  const fetchConversation = useCallback(async () => {
     if (!conversationId) return
 
     try {
@@ -178,12 +154,12 @@ export default function ChatInterface({ conversationId, userRole, onConversation
 
       if (error) throw error
       setConversation(data)
-    } catch (err: any) {
-      setError('Failed to load conversation: ' + err.message)
+    } catch (err: unknown) {
+      setError('Failed to load conversation: ' + (err instanceof Error ? err.message : 'Unknown error'))
     }
-  }
+  }, [conversationId])
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (!conversationId) return
 
     try {
@@ -212,10 +188,36 @@ export default function ChatInterface({ conversationId, userRole, onConversation
             .in('id', unreadMessages.map(msg => msg.id))
         }
       }
-    } catch (err: any) {
-      setError('Failed to load messages: ' + err.message)
+    } catch (err: unknown) {
+      setError('Failed to load messages: ' + (err instanceof Error ? err.message : 'Unknown error'))
     }
-  }
+  }, [conversationId, user?.id])
+
+  useEffect(() => {
+    if (conversationId) {
+      fetchConversation()
+      fetchMessages()
+    }
+  }, [conversationId, fetchConversation, fetchMessages])
+
+  // Set up real-time subscription
+  useEffect(() => {
+    if (conversationId) {
+      const subscription = supabase
+        .channel(`conversation-${conversationId}`)
+        .on('postgres_changes', 
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+          () => {
+            fetchMessages()
+          }
+        )
+        .subscribe()
+
+      return () => {
+        subscription.unsubscribe()
+      }
+    }
+  }, [conversationId, fetchMessages])
 
   const createConversation = async () => {
     try {
@@ -264,8 +266,8 @@ export default function ChatInterface({ conversationId, userRole, onConversation
         initialMessage: ''
       })
 
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
@@ -315,8 +317,8 @@ export default function ChatInterface({ conversationId, userRole, onConversation
       handleTypingStop()
       fetchMessages()
 
-    } catch (err: any) {
-      setError('Failed to send message: ' + err.message)
+    } catch (err: unknown) {
+      setError('Failed to send message: ' + (err instanceof Error ? err.message : 'Unknown error'))
     } finally {
       setLoading(false)
     }
@@ -327,7 +329,7 @@ export default function ChatInterface({ conversationId, userRole, onConversation
       const fileExt = attachment.file.name.split('.').pop()
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
       
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('chat-attachments')
         .upload(fileName, attachment.file)
 
@@ -348,12 +350,10 @@ export default function ChatInterface({ conversationId, userRole, onConversation
 
   // Typing indicator functions
   const handleTypingStart = () => {
-    setIsTyping(true)
     // TODO: Send typing status to other users via real-time channel
   }
 
   const handleTypingStop = () => {
-    setIsTyping(false)
     // TODO: Send typing status to other users via real-time channel
   }
 
@@ -570,9 +570,11 @@ export default function ChatInterface({ conversationId, userRole, onConversation
                     {message.message_type === 'file' && message.attachment_name?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                       // Image attachment
                       <div className="rounded border overflow-hidden">
-                        <img 
+                        <Image 
                           src={message.attachment_url} 
                           alt={message.attachment_name}
+                          width={400}
+                          height={256}
                           className="max-w-full h-auto max-h-64 object-cover"
                         />
                         <div className="p-2 bg-gray-50 text-xs text-gray-600">
@@ -628,14 +630,6 @@ export default function ChatInterface({ conversationId, userRole, onConversation
         })}
         <div ref={messagesEndRef} />
       </CardContent>
-
-      {/* Typing Indicator */}
-      {otherUserTyping && (
-        <TypingIndicator 
-          isTyping={otherUserTyping} 
-          userName={userRole === 'admin' ? 'User' : 'Support'} 
-        />
-      )}
 
       {/* Message Input */}
       <div className="p-4 border-t">

@@ -25,7 +25,7 @@ export function useAuth() {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession()
+      const { data: { session } } = await supabase.auth.getSession()
       
       if (session?.user) {
         const { data: profile } = await auth.getUserProfile(session.user.id)
@@ -102,12 +102,13 @@ export function useRequireAuth(redirectTo = '/auth/login') {
 // Hook for requiring specific role
 export function useRequireRole(requiredRole: UserRole | UserRole[], redirectTo = '/unauthorized') {
   const authState = useAuth()
+  const { initialized, isAuthenticated, hasRole } = authState
   
   useEffect(() => {
-    if (authState.initialized && authState.isAuthenticated && !authState.hasRole(requiredRole)) {
+    if (initialized && isAuthenticated && !hasRole(requiredRole)) {
       window.location.href = redirectTo
     }
-  }, [authState.initialized, authState.isAuthenticated, authState.profile, requiredRole, redirectTo])
+  }, [initialized, isAuthenticated, hasRole, requiredRole, redirectTo])
 
   return authState
 }

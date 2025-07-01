@@ -2,24 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select'
 import { 
   MessageCircle, 
-  Search, 
   Users,
   Clock,
-  AlertTriangle,
-  CheckCircle2,
-  Filter
+  AlertTriangle
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import ConversationList from '@/components/chat/ConversationList'
@@ -43,7 +30,6 @@ export default function AdminSupportPage() {
     urgent: 0,
     unassigned: 0
   })
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchStats()
@@ -51,8 +37,6 @@ export default function AdminSupportPage() {
 
   const fetchStats = async () => {
     try {
-      setLoading(true)
-      
       // Get conversation statistics
       const { data: conversations, error } = await supabase
         .from('conversations')
@@ -69,10 +53,9 @@ export default function AdminSupportPage() {
       }
 
       setStats(stats)
-    } catch (err: any) {
-      console.error('Failed to load stats:', err.message)
-    } finally {
-      setLoading(false)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      console.error('Failed to load stats:', errorMessage)
     }
   }
 
@@ -86,7 +69,7 @@ export default function AdminSupportPage() {
     setShowNewConversation(true)
   }
 
-  const handleConversationCreated = (conversation: any) => {
+  const handleConversationCreated = (conversation: { id: number }) => {
     setSelectedConversationId(conversation.id)
     setShowNewConversation(false)
   }

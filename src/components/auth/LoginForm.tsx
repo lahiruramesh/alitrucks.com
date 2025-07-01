@@ -46,7 +46,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
           router.push(redirectTo || '/')
         }
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)

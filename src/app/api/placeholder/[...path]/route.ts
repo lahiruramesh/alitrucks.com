@@ -43,7 +43,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         },
       })
     }
-  } catch (error) {
+  } catch {
     console.log('Unsplash failed, trying Picsum')
   }
   
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         },
       })
     }
-  } catch (error) {
+  } catch {
     console.log('Picsum failed, trying LoremFlickr')
   }
 
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         },
       })
     }
-  } catch (error) {
+  } catch {
     console.log('LoremFlickr failed, using final fallback')
   }
   
@@ -138,36 +138,4 @@ function generateTruckSVG(width: number, height: number): string {
       <text x="${width * 0.5}" y="${height * 0.15}" text-anchor="middle" fill="#64748B" font-family="Arial, sans-serif" font-size="${Math.min(width, height) * 0.06}">${width}×${height}</text>
     </svg>
   `
-}
-
-function generateGradientImage(width: number, height: number): Buffer {
-  // Create a simple gradient image data
-  const colors = [
-    { r: 100, g: 149, b: 237 }, // Blue
-    { r: 50, g: 205, b: 50 },   // Green  
-    { r: 255, g: 69, b: 0 },    // Red
-    { r: 138, g: 43, b: 226 },  // Purple
-    { r: 255, g: 140, b: 0 },   // Orange
-  ]
-  
-  const colorIndex = (width + height) % colors.length
-  const color = colors[colorIndex]
-  
-  // Create minimal BMP-like structure
-  const pixelData = new Uint8Array(width * height * 3) // RGB
-  
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const index = (y * width + x) * 3
-      
-      // Create a gradient effect
-      const gradientFactor = (x + y) / (width + height)
-      
-      pixelData[index] = Math.floor(color.r * (0.7 + gradientFactor * 0.3))     // R
-      pixelData[index + 1] = Math.floor(color.g * (0.7 + gradientFactor * 0.3)) // G
-      pixelData[index + 2] = Math.floor(color.b * (0.7 + gradientFactor * 0.3)) // B
-    }
-  }
-  
-  return Buffer.from(pixelData)
 }

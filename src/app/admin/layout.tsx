@@ -17,12 +17,10 @@ import {
   Settings,
   LogOut,
   Menu,
-  X,
   MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Card } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { useAdminUnreadMessages } from '@/hooks/useAdminUnreadMessages';

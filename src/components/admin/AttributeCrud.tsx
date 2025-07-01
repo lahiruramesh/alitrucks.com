@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Edit, Trash2, Plus, Save, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -33,17 +32,17 @@ const AttributeCrud: React.FC<AttributeCrudProps> = ({ tableName, title, descrip
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
 
-  useEffect(() => {
-    fetchAttributes();
-  }, [tableName]);
-
-  const fetchAttributes = async () => {
+  const fetchAttributes = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase.from(tableName).select('*').order('name', { ascending: true });
     if (error) console.error('Error fetching attributes:', error);
     else setAttributes(data as Attribute[]);
     setLoading(false);
-  };
+  }, [tableName]);
+
+  useEffect(() => {
+    fetchAttributes();
+  }, [fetchAttributes]);
 
   const handleAdd = async () => {
     if (!newAttributeName.trim()) return;

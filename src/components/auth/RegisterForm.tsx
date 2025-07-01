@@ -65,7 +65,7 @@ export function RegisterForm({ redirectTo, allowRoleSelection = true, defaultRol
         const redirectUrl = redirectTo || getRoleBasedRedirectUrl(formData.role as UserRole)
         router.push(redirectUrl)
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)

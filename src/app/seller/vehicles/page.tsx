@@ -1,17 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { 
   Plus, 
@@ -25,6 +17,7 @@ import {
   Truck
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { useAuthContext } from '@/components/auth/AuthProvider'
 
@@ -52,13 +45,7 @@ export default function SellerVehiclesPage() {
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuthContext()
 
-  useEffect(() => {
-    if (user) {
-      fetchVehicles()
-    }
-  }, [user])
-
-  const fetchVehicles = async () => {
+  const fetchVehicles = useCallback(async () => {
     try {
       setLoading(true)
       const { data, error } = await supabase
@@ -75,12 +62,18 @@ export default function SellerVehiclesPage() {
 
       if (error) throw error
       setVehicles(data || [])
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch vehicles')
     } finally {
       setLoading(false)
     }
-  }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (user) {
+      fetchVehicles()
+    }
+  }, [user, fetchVehicles])
 
   const filteredVehicles = vehicles.filter(vehicle =>
     vehicle.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -102,7 +95,7 @@ export default function SellerVehiclesPage() {
     }
   }
 
-  const getPrimaryImage = (images: any[]) => {
+  const getPrimaryImage = (images: Array<{ id: number; image_url: string; is_primary: boolean }>) => {
     const primary = images?.find(img => img.is_primary)
     return primary?.image_url || images?.[0]?.image_url || '/api/placeholder/200/150'
   }
@@ -120,8 +113,8 @@ export default function SellerVehiclesPage() {
       if (error) throw error
       
       setVehicles(vehicles.filter(v => v.id !== vehicleId))
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to delete vehicle')
     }
   }
 
@@ -184,9 +177,11 @@ export default function SellerVehiclesPage() {
           {filteredVehicles.map((vehicle) => (
             <Card key={vehicle.id} className="overflow-hidden hover:shadow-lg transition-shadow">
               <div className="relative">
-                <img
+                <Image
                   src={getPrimaryImage(vehicle.vehicle_images)}
                   alt={vehicle.name}
+                  width={300}
+                  height={192}
                   className="w-full h-48 object-cover"
                 />
                 <div className="absolute top-3 right-3">

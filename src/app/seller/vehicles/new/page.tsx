@@ -19,13 +19,13 @@ import {
   Upload, 
   X, 
   Plus,
-  Image as ImageIcon,
   ArrowLeft,
   Loader2
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthContext } from '@/components/auth/AuthProvider'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface VehicleAttribute {
   id: number
@@ -80,7 +80,6 @@ export default function NewVehiclePage() {
   const [brands, setBrands] = useState<Brand[]>([])
   const [models, setModels] = useState<Model[]>([])
   const [fuelTypes, setFuelTypes] = useState<VehicleAttribute[]>([])
-  const [rentalPurposes, setRentalPurposes] = useState<VehicleAttribute[]>([])
 
   // Image state
   const [images, setImages] = useState<ImageFile[]>([])
@@ -102,15 +101,13 @@ export default function NewVehiclePage() {
         categoriesResult,
         brandsResult,
         modelsResult,
-        fuelTypesResult,
-        purposesResult
+        fuelTypesResult
       ] = await Promise.all([
         supabase.from('vehicle_types').select('*').order('name'),
         supabase.from('vehicle_categories').select('*').order('name'),
         supabase.from('brands').select('*').order('name'),
         supabase.from('models').select('*').order('name'),
-        supabase.from('fuel_types').select('*').order('name'),
-        supabase.from('rental_purposes').select('*').order('name')
+        supabase.from('fuel_types').select('*').order('name')
       ])
 
       if (typesResult.data) setVehicleTypes(typesResult.data)
@@ -118,9 +115,8 @@ export default function NewVehiclePage() {
       if (brandsResult.data) setBrands(brandsResult.data)
       if (modelsResult.data) setModels(modelsResult.data)
       if (fuelTypesResult.data) setFuelTypes(fuelTypesResult.data)
-      if (purposesResult.data) setRentalPurposes(purposesResult.data)
-    } catch (err: any) {
-      setError('Failed to load form data: ' + err.message)
+    } catch (err: unknown) {
+      setError('Failed to load form data: ' + (err instanceof Error ? err.message : 'Unknown error'))
     }
   }
 
@@ -191,7 +187,7 @@ export default function NewVehiclePage() {
       const fileName = `${user?.id}/${vehicleId}/${imageFile.id}.${fileExt}`
       
       // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('vehicle-images')
         .upload(fileName, imageFile.file)
 
@@ -280,8 +276,8 @@ export default function NewVehiclePage() {
         router.push('/seller/vehicles')
       }, 2000)
       
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
@@ -633,9 +629,11 @@ export default function NewVehiclePage() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {images.map((image) => (
                   <div key={image.id} className="relative group">
-                    <img
+                    <Image
                       src={image.preview}
                       alt="Vehicle preview"
+                      width={128}
+                      height={128}
                       className={`w-full h-32 object-cover rounded-lg border-2 ${
                         image.id === primaryImageId 
                           ? 'border-green-500' 

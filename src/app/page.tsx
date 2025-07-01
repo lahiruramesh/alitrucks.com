@@ -121,7 +121,7 @@ export default function Home() {
   }, [])
 
   const filteredAndSortedTrucks = useMemo(() => {
-    let filtered = trucks.filter(truck => {
+    const filtered = trucks.filter(truck => {
       // Price filter
       if (truck.price < filters.priceRange[0] || truck.price > filters.priceRange[1]) {
         return false

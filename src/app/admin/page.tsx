@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Truck, Tag, Building2, Car, Target, Fuel, Plus, TrendingUp, Users } from 'lucide-react';
+import { Truck, Tag, Building2, Car, Target, Fuel, Plus, TrendingUp } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client

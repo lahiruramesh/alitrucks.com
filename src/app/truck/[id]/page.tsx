@@ -4,7 +4,7 @@ import TruckDetails from '@/components/TruckDetails'
 import BookingCard from '@/components/BookingCard'
 import ReviewsSection from '@/components/ReviewsSection'
 import { Badge } from '@/components/ui/badge'
-import { Star, MapPin, Zap, Shield, Award } from 'lucide-react'
+import { Star, MapPin, Zap, Shield } from 'lucide-react'
 
 // This would normally come from a database or API
 const getTruckData = (id: string) => {

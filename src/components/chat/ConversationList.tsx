@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -9,9 +9,7 @@ import {
   MessageCircle, 
   Search, 
   Plus,
-  Clock,
-  AlertCircle,
-  CheckCircle2
+  Clock
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthContext } from '@/components/auth/AuthProvider'
@@ -85,42 +83,7 @@ export default function ConversationList({
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
 
-  useEffect(() => {
-    // Only fetch conversations if user is authenticated and initialized
-    if (!initialized || !user?.id) {
-      setLoading(false)
-      return
-    }
-    
-    fetchConversations()
-    
-    // Set up real-time subscription
-    const subscription = supabase
-      .channel('conversations-list')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'conversations' },
-        () => {
-          fetchConversations()
-        }
-      )
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'messages' },
-        () => {
-          fetchConversations()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [user?.id, userRole, initialized]) // Add initialized as dependency
-
-  useEffect(() => {
-    filterConversations()
-  }, [conversations, searchTerm, statusFilter])
-
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     // Don't fetch if user is not authenticated or not initialized
     if (!initialized || !user?.id) {
       console.log('User not authenticated or not initialized, skipping conversation fetch')
@@ -183,14 +146,45 @@ export default function ConversationList({
       )
 
       setConversations(conversationsWithDetails)
-    } catch (err: any) {
-      console.error('Failed to load conversations:', err.message)
+    } catch (err: unknown) {
+      console.error('Failed to load conversations:', err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
-  }
+  }, [initialized, userRole, user])
 
-  const filterConversations = () => {
+  useEffect(() => {
+    // Only fetch conversations if user is authenticated and initialized
+    if (!initialized || !user?.id) {
+      setLoading(false)
+      return
+    }
+    
+    fetchConversations()
+    
+    // Set up real-time subscription
+    const subscription = supabase
+      .channel('conversations-list')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'conversations' },
+        () => {
+          fetchConversations()
+        }
+      )
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'messages' },
+        () => {
+          fetchConversations()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [user?.id, userRole, initialized, fetchConversations])
+
+  const filterConversations = useCallback(() => {
     let filtered = conversations
 
     // Filter by search term
@@ -207,7 +201,15 @@ export default function ConversationList({
     }
 
     setFilteredConversations(filtered)
-  }
+  }, [conversations, searchTerm, statusFilter])
+
+  useEffect(() => {
+    fetchConversations()
+  }, [fetchConversations])
+
+  useEffect(() => {
+    filterConversations()
+  }, [filterConversations])
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString)

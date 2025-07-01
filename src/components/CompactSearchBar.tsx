@@ -3,12 +3,16 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import CustomDialog from '@/components/CustomDialog'
 import { MapPin, Calendar as CalendarIcon, Users, Search, Minus, Plus } from 'lucide-react'
 
 interface CompactSearchBarProps {
-  onSearch?: (searchData: any) => void
+  onSearch?: (searchData: {
+    location: string;
+    checkIn?: Date;
+    checkOut?: Date;
+    capacity: number;
+  }) => void
 }
 
 export default function CompactSearchBar({ onSearch }: CompactSearchBarProps) {
@@ -19,7 +23,6 @@ export default function CompactSearchBar({ onSearch }: CompactSearchBarProps) {
   const [capacity, setCapacity] = useState(1)
   const [isLocationOpen, setIsLocationOpen] = useState(false)
   const [isCheckInOpen, setIsCheckInOpen] = useState(false)
-  const [isCheckOutOpen, setIsCheckOutOpen] = useState(false)
   const [isCapacityOpen, setIsCapacityOpen] = useState(false)
 
   useEffect(() => {
@@ -61,7 +64,6 @@ export default function CompactSearchBar({ onSearch }: CompactSearchBarProps) {
       setIsCheckInOpen(false)
     } else {
       setCheckOut(date)
-      setIsCheckOutOpen(false)
     }
   }
 

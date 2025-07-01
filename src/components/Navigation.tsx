@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Menu, Search, User, MapPin, Calendar, Users, LogOut, Settings, Shield, X } from 'lucide-react'
+import { Menu, User, LogOut, Settings, X } from 'lucide-react'
 import { useAuthContext } from '@/components/auth/AuthProvider'
 import { auth, getRoleBasedRedirectUrl } from '@/lib/auth'
 

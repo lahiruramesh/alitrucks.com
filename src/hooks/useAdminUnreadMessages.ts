@@ -3,17 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-interface Message {
-  id: string;
-  read_by: any;
-  sender_id: string;
-  created_at: string;
-}
 
-interface Conversation {
-  id: string;
-  messages: Message[];
-}
 
 export function useAdminUnreadMessages(enabled: boolean = true) {
   const [unreadCount, setUnreadCount] = useState(0);

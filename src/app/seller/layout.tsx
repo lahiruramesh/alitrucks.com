@@ -15,8 +15,7 @@ import {
   LogOut,
   Menu,
   MessageSquare,
-  Image as ImageIcon,
-  MapPin
+  Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';

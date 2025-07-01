@@ -3,6 +3,7 @@
 import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Paperclip, X } from 'lucide-react';
+import Image from 'next/image';
 
 interface FileAttachment {
   file: File;
@@ -83,9 +84,11 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             <div key={attachment.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
               <div className="flex items-center space-x-2 min-w-0">
                 {attachment.file.type.startsWith('image/') ? (
-                  <img 
+                  <Image 
                     src={attachment.url} 
                     alt={attachment.file.name}
+                    width={32}
+                    height={32}
                     className="w-8 h-8 object-cover rounded"
                   />
                 ) : (
