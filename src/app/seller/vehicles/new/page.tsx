@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthContext } from '@/components/auth/AuthProvider'
+import { useAdminNotifications } from '@/hooks/useAdminNotifications'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -52,6 +53,7 @@ interface ImageFile {
 export default function NewVehiclePage() {
   const router = useRouter()
   const { user } = useAuthContext()
+  const { createNotification } = useAdminNotifications()
   
   // Form state
   const [formData, setFormData] = useState({
@@ -60,6 +62,7 @@ export default function NewVehiclePage() {
     year: new Date().getFullYear(),
     mileage: '',
     location: '',
+    vehicle_registration_number: '',
     vehicle_type_id: '',
     vehicle_category_id: '',
     brand_id: '',
@@ -227,7 +230,7 @@ export default function NewVehiclePage() {
 
     try {
       // Validate required fields
-      if (!formData.name || !formData.location || !formData.price_per_day) {
+      if (!formData.name || !formData.location || !formData.price_per_day || !formData.vehicle_registration_number) {
         throw new Error('Please fill in all required fields')
       }
 
@@ -235,14 +238,30 @@ export default function NewVehiclePage() {
         throw new Error('Please upload at least one image')
       }
 
+      // Check for duplicate registration number
+      const { data: existingVehicle, error: checkError } = await supabase
+        .from('vehicles')
+        .select('id')
+        .eq('vehicle_registration_number', formData.vehicle_registration_number)
+        .single()
+
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
+        throw new Error('Error checking registration number: ' + checkError.message)
+      }
+
+      if (existingVehicle) {
+        throw new Error('This registration number is already in use. Please use a unique registration number.')
+      }
+
       // Create vehicle record
       const vehicleData = {
-        seller_id: user?.id,
+        owner_id: user?.id,
         name: formData.name,
         description: formData.description,
         year: formData.year,
         mileage: formData.mileage ? parseInt(formData.mileage) : null,
         location: formData.location,
+        vehicle_registration_number: formData.vehicle_registration_number,
         vehicle_type_id: formData.vehicle_type_id ? parseInt(formData.vehicle_type_id) : null,
         vehicle_category_id: formData.vehicle_category_id ? parseInt(formData.vehicle_category_id) : null,
         brand_id: formData.brand_id ? parseInt(formData.brand_id) : null,
@@ -268,6 +287,19 @@ export default function NewVehiclePage() {
 
       // Upload images
       await uploadImages(vehicle.id)
+
+      // Notify admins of new vehicle submission
+      await createNotification(
+        'vehicle_submitted',
+        'New Vehicle Submission',
+        `${user?.email || 'A seller'} has submitted a new vehicle "${formData.name}" (${formData.vehicle_registration_number}) for approval.`,
+        {
+          vehicleId: vehicle.id,
+          vehicleName: formData.name,
+          registrationNumber: formData.vehicle_registration_number,
+          sellerEmail: user?.email
+        }
+      )
 
       setSuccess('Vehicle submitted successfully! It will be reviewed by our team.')
       
@@ -367,6 +399,22 @@ export default function NewVehiclePage() {
                   required
                 />
               </div>
+              <div>
+                <Label htmlFor="vehicle_registration_number">Registration Number *</Label>
+                <Input
+                  id="vehicle_registration_number"
+                  value={formData.vehicle_registration_number}
+                  onChange={(e) => handleInputChange('vehicle_registration_number', e.target.value)}
+                  placeholder="e.g., ABC123XYZ"
+                  required
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Enter the official vehicle registration number
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="mileage">Mileage</Label>
                 <Input

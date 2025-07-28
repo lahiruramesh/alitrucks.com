@@ -13,6 +13,9 @@ export interface AuthState {
   initialized: boolean
 }
 
+// Simple in-memory cache for user profiles
+const profileCache = new Map<string, UserProfile>()
+
 export function useAuth() {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -23,20 +26,61 @@ export function useAuth() {
   })
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null
+    
+    // Set a timeout to prevent indefinite loading
+    timeoutId = setTimeout(() => {
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        initialized: true
+      }))
+    }, 5000) // 5 second timeout
+    
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (session?.user) {
-        const { data: profile } = await auth.getUserProfile(session.user.id)
-        setState({
-          user: session.user,
-          session,
-          profile,
-          loading: false,
-          initialized: true
-        })
-      } else {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutId = null
+        }
+        
+        if (session?.user) {
+          // Check cache first
+          let profile = profileCache.get(session.user.id)
+          
+          if (!profile) {
+            const { data: fetchedProfile } = await auth.getUserProfile(session.user.id)
+            if (fetchedProfile) {
+              profileCache.set(session.user.id, fetchedProfile)
+              profile = fetchedProfile
+            }
+          }
+          
+          setState({
+            user: session.user,
+            session,
+            profile: profile || null,
+            loading: false,
+            initialized: true
+          })
+        } else {
+          setState({
+            user: null,
+            session: null,
+            profile: null,
+            loading: false,
+            initialized: true
+          })
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error)
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutId = null
+        }
         setState({
           user: null,
           session: null,
@@ -52,28 +96,56 @@ export function useAuth() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          const { data: profile } = await auth.getUserProfile(session.user.id)
-          setState({
-            user: session.user,
-            session,
-            profile,
+        try {
+          if (session?.user) {
+            // Check cache first
+            let profile = profileCache.get(session.user.id)
+            
+            if (!profile || event === 'SIGNED_IN') {
+              const { data: fetchedProfile } = await auth.getUserProfile(session.user.id)
+              if (fetchedProfile) {
+                profileCache.set(session.user.id, fetchedProfile)
+                profile = fetchedProfile
+              }
+            }
+            
+            setState({
+              user: session.user,
+              session,
+              profile: profile || null,
+              loading: false,
+              initialized: true
+            })
+          } else {
+            // Clear cache on sign out
+            if (event === 'SIGNED_OUT') {
+              profileCache.clear()
+            }
+            setState({
+              user: null,
+              session: null,
+              profile: null,
+              loading: false,
+              initialized: true
+            })
+          }
+        } catch (error) {
+          console.error('Error handling auth state change:', error)
+          setState(prev => ({
+            ...prev,
             loading: false,
             initialized: true
-          })
-        } else {
-          setState({
-            user: null,
-            session: null,
-            profile: null,
-            loading: false,
-            initialized: true
-          })
+          }))
         }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
   }, [])
 
   return {

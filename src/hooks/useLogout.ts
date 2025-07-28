@@ -17,7 +17,7 @@ export const useLogout = () => {
       console.log('User signed out successfully');
       
       // Redirect to login page
-      router.push('/login');
+      router.push('/auth/login');
     } catch (error) {
       console.error('Logout error:', error);
       alert('An unexpected error occurred during sign out.');

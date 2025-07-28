@@ -143,7 +143,7 @@ const AdminPage = () => {
     <div className="space-y-4 lg:space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 lg:p-6 text-white">
-        <h1 className="text-2xl lg:text-3xl font-bold mb-2">Welcome to AliTrucks Admin</h1>
+        <h1 className="text-2xl lg:text-3xl font-bold mb-2">Welcome to Truck Rental Admin</h1>
         <p className="text-blue-100 text-sm lg:text-base">Manage your electric truck rental platform from this central dashboard.</p>
       </div>
 

@@ -206,6 +206,68 @@ export interface Database {
           updated_at?: string
         }
       }
+      vehicles: {
+        Row: {
+          id: string
+          owner_id: string
+          brand_id: string
+          model_id: string
+          year: number
+          color: string
+          vin: string | null
+          price_per_day: number
+          location: string
+          availability_start_date: string
+          availability_end_date: string
+          description: string | null
+          features: Json | null
+          created_at: string
+          updated_at: string
+          status: "pending" | "approved" | "rejected"
+          vehicle_registration_number: string
+          rejection_reason: string | null
+        }
+        Insert: {
+          id?: string
+          owner_id: string
+          brand_id: string
+          model_id: string
+          year: number
+          color: string
+          vin?: string | null
+          price_per_day: number
+          location: string
+          availability_start_date: string
+          availability_end_date: string
+          description?: string | null
+          features?: Json | null
+          created_at?: string
+          updated_at?: string
+          status?: "pending" | "approved" | "rejected"
+          vehicle_registration_number: string
+          rejection_reason?: string | null
+        }
+        Update: {
+          id?: string
+          owner_id?: string
+          brand_id?: string
+          model_id?: string
+          year?: number
+          color?: string
+          vin?: string | null
+          price_per_day?: number
+          location?: string
+          availability_start_date?: string
+          availability_end_date?: string
+          description?: string | null
+          features?: Json | null
+          created_at?: string
+          updated_at?: string
+          status?: "pending" | "approved" | "rejected"
+          vehicle_registration_number?: string
+          rejection_reason?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -215,9 +277,12 @@ export interface Database {
     }
     Enums: {
       user_role: 'admin' | 'seller' | 'buyer'
+      vehicle_status: 'pending' | 'approved' | 'rejected'
     }
     CompositeTypes: {
       [_ in never]: never
     }
   }
 }
+
+export type Vehicle = Database['public']['Tables']['vehicles']['Row']

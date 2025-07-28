@@ -17,7 +17,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  MessageSquare
+  MessageSquare,
+  CheckCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -36,6 +37,11 @@ const sidebarItems = [
   {
     title: 'Vehicle Management',
     items: [
+      {
+        title: 'Vehicle Approvals',
+        href: '/admin/vehicle-approvals',
+        icon: CheckCircle,
+      },
       {
         title: 'Vehicle Types',
         href: '/admin/vehicle-types',

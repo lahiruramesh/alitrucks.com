@@ -20,8 +20,14 @@ export function ProtectedRoute({ children, redirectTo = '/auth/login' }: Protect
 
   if (!initialized || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-gray-900">Loading...</h3>
+            <p className="text-sm text-gray-500">Setting up your dashboard</p>
+          </div>
+        </div>
       </div>
     )
   }
@@ -44,8 +50,14 @@ export function RoleProtectedRoute({
 
   if (!initialized || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-gray-900">Loading...</h3>
+            <p className="text-sm text-gray-500">Verifying permissions</p>
+          </div>
+        </div>
       </div>
     )
   }

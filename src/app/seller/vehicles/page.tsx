@@ -1,268 +1,270 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { 
-  Plus, 
-  Search, 
-  Eye,
-  Edit,
-  Trash2,
-  Image as ImageIcon,
-  MapPin,
-  DollarSign,
-  Truck
-} from 'lucide-react'
-import Link from 'next/link'
-import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
-import { useAuthContext } from '@/components/auth/AuthProvider'
+import { Vehicle } from '@/types/database'
+import { useAuth } from '@/hooks/useAuth'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { CheckCircle, XCircle, Clock, Edit, Eye, AlertTriangle } from 'lucide-react'
+import Link from 'next/link'
 
-interface Vehicle {
-  id: number
-  name: string
-  description: string
-  year: number
-  mileage: number
-  location: string
-  price_per_day: number
-  status: 'pending' | 'approved' | 'rejected' | 'inactive'
-  created_at: string
-  updated_at: string
-  vehicle_images: { id: number; image_url: string; is_primary: boolean }[]
-  brands: { name: string }
-  models: { name: string }
-  vehicle_types: { name: string }
+type VehicleWithDetails = Vehicle & {
+  brands: {
+    name: string
+  } | null
+  models: {
+    name: string
+  } | null
 }
 
 export default function SellerVehiclesPage() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [vehicles, setVehicles] = useState<VehicleWithDetails[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const { user } = useAuthContext()
+  const [activeTab, setActiveTab] = useState('all')
+  const { user } = useAuth()
 
   const fetchVehicles = useCallback(async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('vehicles')
-        .select(`
-          *,
-          brands (name),
-          models (name),
-          vehicle_types (name),
-          vehicle_images (id, image_url, is_primary)
-        `)
-        .eq('seller_id', user?.id)
-        .order('created_at', { ascending: false })
+    if (!user?.id) return
+    
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('vehicles')
+      .select(`
+        *,
+        brands (
+          name
+        ),
+        models (
+          name
+        )
+      `)
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: false })
 
-      if (error) throw error
-      setVehicles(data || [])
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch vehicles')
-    } finally {
-      setLoading(false)
+    if (error) {
+      setError('Failed to fetch your vehicles.')
+      console.error(error)
+    } else {
+      setVehicles(data as VehicleWithDetails[])
     }
+    setLoading(false)
   }, [user?.id])
 
   useEffect(() => {
-    if (user) {
-      fetchVehicles()
-    }
-  }, [user, fetchVehicles])
+    fetchVehicles()
+  }, [fetchVehicles])
 
-  const filteredVehicles = vehicles.filter(vehicle =>
-    vehicle.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vehicle.location.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const getStatusBadge = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'approved':
-        return <Badge className="bg-green-500 text-white">Approved</Badge>
-      case 'pending':
-        return <Badge className="bg-yellow-500 text-white">Pending</Badge>
+        return <CheckCircle className="w-4 h-4 text-green-600" />
       case 'rejected':
-        return <Badge className="bg-red-500 text-white">Rejected</Badge>
-      case 'inactive':
-        return <Badge variant="secondary">Inactive</Badge>
+        return <XCircle className="w-4 h-4 text-red-600" />
+      case 'pending':
+        return <Clock className="w-4 h-4 text-yellow-600" />
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Clock className="w-4 h-4 text-gray-600" />
     }
   }
 
-  const getPrimaryImage = (images: Array<{ id: number; image_url: string; is_primary: boolean }>) => {
-    const primary = images?.find(img => img.is_primary)
-    return primary?.image_url || images?.[0]?.image_url || '/api/placeholder/200/150'
-  }
-
-  const deleteVehicle = async (vehicleId: number) => {
-    if (!confirm('Are you sure you want to delete this vehicle?')) return
-
-    try {
-      const { error } = await supabase
-        .from('vehicles')
-        .delete()
-        .eq('id', vehicleId)
-        .eq('seller_id', user?.id)
-
-      if (error) throw error
-      
-      setVehicles(vehicles.filter(v => v.id !== vehicleId))
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to delete vehicle')
+  const getStatusVariant = (status: string): "default" | "destructive" | "secondary" => {
+    switch (status) {
+      case 'approved':
+        return 'default'
+      case 'rejected':
+        return 'destructive'
+      default:
+        return 'secondary'
     }
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Vehicles</h1>
-            <p className="text-gray-600 mt-1">Manage your vehicle listings</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-64 bg-gray-100 rounded-lg animate-pulse" />
-          ))}
-        </div>
-      </div>
-    )
+  const filteredVehicles = vehicles.filter(vehicle => {
+    if (activeTab === 'all') return true
+    return vehicle.status === activeTab
+  })
+
+  const getVehicleCount = (status: string) => {
+    if (status === 'all') return vehicles.length
+    return vehicles.filter(v => v.status === status).length
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">My Vehicles</h1>
-          <p className="text-gray-600 mt-1">Manage your vehicle listings</p>
+          <p className="text-gray-600 mt-1">View and manage your vehicle listings and their approval status</p>
         </div>
         <Button asChild>
           <Link href="/seller/vehicles/new">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Vehicle
+            Add New Vehicle
           </Link>
         </Button>
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search vehicles by name or location..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
+      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
-
-      {/* Vehicles Grid */}
-      {filteredVehicles.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredVehicles.map((vehicle) => (
-            <Card key={vehicle.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="relative">
-                <Image
-                  src={getPrimaryImage(vehicle.vehicle_images)}
-                  alt={vehicle.name}
-                  width={300}
-                  height={192}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="absolute top-3 right-3">
-                  {getStatusBadge(vehicle.status)}
-                </div>
-                <div className="absolute top-3 left-3">
-                  <Badge variant="secondary" className="bg-white/90 text-gray-700">
-                    <ImageIcon className="w-3 h-3 mr-1" />
-                    {vehicle.vehicle_images?.length || 0}
-                  </Badge>
-                </div>
-              </div>
-
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="min-w-0 flex-1">
-                    <CardTitle className="text-lg truncate">{vehicle.name}</CardTitle>
-                    <CardDescription className="flex items-center text-sm text-gray-500 mt-1">
-                      <MapPin className="w-3 h-3 mr-1" />
-                      {vehicle.location}
-                    </CardDescription>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">
-                    {vehicle.year} • {vehicle.brands?.name} {vehicle.models?.name}
-                  </span>
-                  <div className="flex items-center font-semibold text-green-600">
-                    <DollarSign className="w-4 h-4" />
-                    {vehicle.price_per_day}/day
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="pt-0">
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" asChild>
-                    <Link href={`/seller/vehicles/${vehicle.id}`}>
-                      <Eye className="w-4 h-4 mr-1" />
-                      View
-                    </Link>
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex-1" asChild>
-                    <Link href={`/seller/vehicles/${vehicle.id}/edit`}>
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Link>
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => deleteVehicle(vehicle.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Truck className="w-16 h-16 text-gray-300 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No vehicles found</h3>
-            <p className="text-gray-500 text-center mb-6">
-              {searchTerm ? 'No vehicles match your search criteria.' : 'You haven\'t added any vehicles yet.'}
-            </p>
-            {!searchTerm && (
-              <Button asChild>
-                <Link href="/seller/vehicles/new">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Your First Vehicle
-                </Link>
-              </Button>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="all">
+            All Vehicles
+            {getVehicleCount('all') > 0 && (
+              <Badge variant="outline" className="ml-2">
+                {getVehicleCount('all')}
+              </Badge>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </TabsTrigger>
+          <TabsTrigger value="pending">
+            Pending
+            {getVehicleCount('pending') > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {getVehicleCount('pending')}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="approved">
+            Approved
+            {getVehicleCount('approved') > 0 && (
+              <Badge variant="default" className="ml-2">
+                {getVehicleCount('approved')}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="rejected">
+            Rejected
+            {getVehicleCount('rejected') > 0 && (
+              <Badge variant="destructive" className="ml-2">
+                {getVehicleCount('rejected')}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab}>
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Loading vehicles...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredVehicles.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <div className="text-gray-400 mb-4">
+                    <AlertTriangle className="w-12 h-12 mx-auto" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {activeTab === 'all' ? 'No vehicles found' : `No ${activeTab} vehicles`}
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    {activeTab === 'all' 
+                      ? "You haven't added any vehicles yet." 
+                      : `You don't have any ${activeTab} vehicles.`
+                    }
+                  </p>
+                  {activeTab === 'all' && (
+                    <Button asChild>
+                      <Link href="/seller/vehicles/new">
+                        Add Your First Vehicle
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                filteredVehicles.map(vehicle => (
+                  <Card key={vehicle.id} className="relative">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="flex items-center gap-2">
+                            {getStatusIcon(vehicle.status)}
+                            {vehicle.brands?.name} {vehicle.models?.name}
+                          </CardTitle>
+                          <CardDescription>
+                            Reg: {vehicle.vehicle_registration_number}
+                          </CardDescription>
+                        </div>
+                        <Badge variant={getStatusVariant(vehicle.status)} className="ml-2">
+                          {vehicle.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Year:</span>
+                          <span className="font-medium">{vehicle.year}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Color:</span>
+                          <span className="font-medium">{vehicle.color}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Price per day:</span>
+                          <span className="font-medium">${vehicle.price_per_day}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Location:</span>
+                          <span className="font-medium">{vehicle.location}</span>
+                        </div>
+                      </div>
+
+                      {vehicle.status === 'rejected' && vehicle.rejection_reason && (
+                        <Alert variant="destructive">
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription>
+                            <strong>Rejection Reason:</strong> {vehicle.rejection_reason}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {vehicle.status === 'pending' && (
+                        <Alert>
+                          <Clock className="h-4 w-4" />
+                          <AlertDescription>
+                            Your vehicle is under review. You'll be notified once it's approved or if any changes are needed.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {vehicle.status === 'approved' && (
+                        <Alert className="border-green-500 bg-green-50">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <AlertDescription className="text-green-700">
+                            Your vehicle is approved and visible to customers.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      <div className="flex gap-2 pt-2">
+                        <Button variant="outline" size="sm" asChild className="flex-1">
+                          <Link href={`/seller/vehicles/${vehicle.id}`}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View
+                          </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" asChild className="flex-1">
+                          <Link href={`/seller/vehicles/${vehicle.id}/edit`}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

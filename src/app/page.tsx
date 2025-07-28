@@ -7,10 +7,21 @@ import TruckCard from '@/components/TruckCard'
 import Navigation from '@/components/Navigation'
 import TruckFilters from '@/components/TruckFilters'
 import TruckSort, { SortOption } from '@/components/TruckSort'
-import { Suspense, useState, useMemo, useEffect } from 'react'
+import { Suspense, useState, useMemo, useEffect, useCallback } from 'react'
+import { supabase } from '@/lib/supabase'
+import { Vehicle } from '@/types/database'
 
-// Dummy truck data
-const trucks = [
+type VehicleWithDetails = Vehicle & {
+  brands: {
+    name: string
+  } | null
+  models: {
+    name: string
+  } | null
+}
+
+// Fallback dummy data (kept as backup)
+const fallbackTrucks = [
   {
     id: 1,
     name: "Tesla Semi Electric Truck",
@@ -102,6 +113,9 @@ const trucks = [
 ]
 
 export default function Home() {
+  const [vehicles, setVehicles] = useState<VehicleWithDetails[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState({
     priceRange: [50, 500] as [number, number],
     location: [] as string[],
@@ -112,6 +126,46 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<SortOption>('price-low')
   const [isMobile, setIsMobile] = useState(false)
 
+  // Fetch only approved vehicles from the database
+  const fetchVehicles = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    
+    try {
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select(`
+          *,
+          brands (
+            name
+          ),
+          models (
+            name
+          )
+        `)
+        .eq('status', 'approved') // Only fetch approved vehicles
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        throw error
+      }
+
+      setVehicles(data as VehicleWithDetails[] || [])
+    } catch (err) {
+      console.error('Error fetching vehicles:', err)
+      setError('Failed to load vehicles. Please try again.')
+      // Use fallback data in case of error
+      setVehicles([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Fetch vehicles on component mount
+  useEffect(() => {
+    fetchVehicles()
+  }, [fetchVehicles])
+
   // Detect mobile on mount
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -120,8 +174,23 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  const filteredAndSortedTrucks = useMemo(() => {
-    const filtered = trucks.filter(truck => {
+  // Transform vehicle data to match truck card expectations
+  const transformVehicleToTruck = (vehicle: VehicleWithDetails) => ({
+    id: vehicle.id,
+    name: `${vehicle.brands?.name || 'Unknown'} ${vehicle.models?.name || 'Model'}`,
+    image: "/api/placeholder/400/300", // TODO: Use actual vehicle images when available
+    price: vehicle.price_per_day,
+    rating: 4.5, // TODO: Calculate actual rating from reviews
+    reviews: 0, // TODO: Get actual review count
+    location: vehicle.location,
+    distance: "2.3 miles away", // TODO: Calculate actual distance
+    features: vehicle.features ? Object.values(vehicle.features as any) : []
+  })
+
+  const filteredAndSortedVehicles = useMemo(() => {
+    const trucksData = vehicles.map(transformVehicleToTruck)
+    
+    const filtered = trucksData.filter(truck => {
       // Price filter
       if (truck.price < filters.priceRange[0] || truck.price > filters.priceRange[1]) {
         return false
@@ -140,8 +209,8 @@ export default function Home() {
       // Features filter
       if (filters.features.length > 0) {
         const hasAllFeatures = filters.features.every(feature => 
-          truck.features.some(truckFeature => 
-            truckFeature.toLowerCase().includes(feature.toLowerCase())
+          truck.features.some((truckFeature: any) => 
+            String(truckFeature).toLowerCase().includes(feature.toLowerCase())
           )
         )
         if (!hasAllFeatures) return false
@@ -175,7 +244,7 @@ export default function Home() {
     })
 
     return filtered
-  }, [filters, sortBy])
+  }, [vehicles, filters, sortBy])
 
   return (
     <div className="min-h-screen bg-white">
@@ -209,7 +278,7 @@ export default function Home() {
               Available Electric Trucks
             </h2>
             <p className="text-gray-600 mt-2">
-              {filteredAndSortedTrucks.length} trucks available {filters.location.length > 0 ? 'in selected areas' : 'in your area'}
+              {loading ? 'Loading vehicles...' : `${filteredAndSortedVehicles.length} trucks available ${filters.location.length > 0 ? 'in selected areas' : 'in your area'}`}
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -223,46 +292,85 @@ export default function Home() {
             />
           </div>
         </div>
-        
-        {filteredAndSortedTrucks.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredAndSortedTrucks.map((truck) => (
-                <TruckCard key={truck.id} truck={truck} />
-              ))}
-            </div>
 
-            {/* Load More Button - only show if there are more trucks in the original array */}
-            {filteredAndSortedTrucks.length === trucks.length && trucks.length >= 8 && (
-              <div className="flex justify-center mt-12">
-                <button className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-full transition-colors">
-                  Load more trucks
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
+        {/* Error State */}
+        {error && (
           <div className="text-center py-16">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No trucks found</h3>
-            <p className="text-gray-600 mb-6">Try adjusting your filters to see more results</p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Something went wrong</h3>
+            <p className="text-gray-600 mb-6">{error}</p>
             <button 
-              onClick={() => setFilters({
-                priceRange: [50, 500],
-                location: [],
-                rating: 0,
-                features: [],
-                truckType: []
-              })}
+              onClick={fetchVehicles}
               className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors"
             >
-              Clear all filters
+              Try again
             </button>
           </div>
+        )}
+
+        {/* Loading State */}
+        {loading && !error && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-80 bg-gray-100 rounded-lg animate-pulse"></div>
+            ))}
+          </div>
+        )}
+        
+        {/* Vehicle Grid */}
+        {!loading && !error && (
+          filteredAndSortedVehicles.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredAndSortedVehicles.map((truck: any) => (
+                  <TruckCard key={truck.id} truck={truck} />
+                ))}
+              </div>
+
+              {/* Load More Button - only show if there are more vehicles */}
+              {filteredAndSortedVehicles.length === vehicles.length && vehicles.length >= 8 && (
+                <div className="flex justify-center mt-12">
+                  <button 
+                    onClick={fetchVehicles}
+                    className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-full transition-colors"
+                  >
+                    Load more trucks
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-16">
+              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No trucks found</h3>
+              <p className="text-gray-600 mb-6">
+                {vehicles.length === 0 
+                  ? "No approved vehicles are currently available. Please check back later." 
+                  : "Try adjusting your filters to see more results"
+                }
+              </p>
+              <button 
+                onClick={() => setFilters({
+                  priceRange: [50, 500],
+                  location: [],
+                  rating: 0,
+                  features: [],
+                  truckType: []
+                })}
+                className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )
         )}
       </div>
 

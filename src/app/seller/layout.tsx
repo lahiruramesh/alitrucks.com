@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -83,10 +83,59 @@ const sidebarItems = [
   },
 ];
 
+// Loading skeleton component
+const SellerLayoutSkeleton = () => (
+  <div className="flex min-h-screen bg-white">
+    {/* Desktop Sidebar Skeleton */}
+    <aside className="hidden lg:flex w-64 bg-white shadow-sm">
+      <div className="p-6 w-full">
+        <div className="flex items-center gap-2 mb-8">
+          <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse"></div>
+          <div>
+            <div className="h-5 bg-gray-200 rounded w-20 mb-1 animate-pulse"></div>
+            <div className="h-3 bg-gray-200 rounded w-16 animate-pulse"></div>
+          </div>
+        </div>
+        
+        <nav className="space-y-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-10 bg-gray-200 rounded animate-pulse"></div>
+          ))}
+        </nav>
+      </div>
+    </aside>
+
+    {/* Main Content Skeleton */}
+    <main className="flex-1 flex flex-col">
+      {/* Header Skeleton */}
+      <header className="bg-white shadow-sm">
+        <div className="px-4 lg:px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="h-8 bg-gray-200 rounded w-32 animate-pulse"></div>
+            </div>
+            <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
+          </div>
+        </div>
+      </header>
+
+      {/* Page Content Skeleton */}
+      <div className="flex-1 p-4 lg:p-6">
+        <div className="space-y-4">
+          <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-64 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+);
+
 const SellerLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <SellerRoute>
-      <SellerLayoutContent>{children}</SellerLayoutContent>
+      <Suspense fallback={<SellerLayoutSkeleton />}>
+        <SellerLayoutContent>{children}</SellerLayoutContent>
+      </Suspense>
     </SellerRoute>
   );
 };
@@ -134,7 +183,7 @@ const SellerLayoutContent = ({ children }: { children: React.ReactNode }) => {
                       <span className="truncate">{subItem.title}</span>
                       {subItem.href === '/seller/messages' && unreadCount > 0 && (
                         <Badge variant="destructive" className="ml-auto text-xs">
-                          {unreadCount}
+                          {unreadCount > 99 ? '99+' : unreadCount}
                         </Badge>
                       )}
                     </Button>
