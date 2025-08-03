@@ -7,7 +7,12 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', '@supabase/supabase-js'],
   },
   images: {
-    remotePatterns: [new URL('http://127.0.0.1:54321/**'), new URL('https://dpskkabtuhmbpblntsyj.storage.supabase.co/storage/v1/s3/**')]
+    remotePatterns: [
+      new URL('http://127.0.0.1:54321/**'),
+      new URL('https://dpskkabtuhmbpblntsyj.storage.supabase.co/storage/v1/s3/**'),
+      new URL('https://alitrucks-com.vercel.app/**')
+    
+    ]
   },
 
   // Development-specific optimizations
