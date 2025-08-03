@@ -9,8 +9,12 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       new URL('http://127.0.0.1:54321/**'),
-      new URL('https://dpskkabtuhmbpblntsyj.storage.supabase.co/storage/v1/s3/**'),
-      new URL('https://alitrucks-com.vercel.app/**')
+      {
+        protocol: 'https',
+        hostname: 'dpskkabtuhmbpblntsyj.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
     
     ]
   },
