@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { createClient } from './supabase'
 import { Database } from '@/types/database'
 
 export type UserRole = 'admin' | 'seller' | 'buyer'
@@ -10,6 +10,7 @@ export const auth = {
     full_name?: string
     role?: UserRole
   }) {
+    const supabase = createClient()
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -25,6 +26,7 @@ export const auth = {
 
   // Sign in existing user
   async signIn(email: string, password: string) {
+    const supabase = createClient()
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -34,24 +36,28 @@ export const auth = {
 
   // Sign out
   async signOut() {
+    const supabase = createClient()
     const { error } = await supabase.auth.signOut()
     return { error }
   },
 
   // Get current session
   async getSession() {
+    const supabase = createClient()
     const { data, error } = await supabase.auth.getSession()
     return { data, error }
   },
 
   // Get current user
   async getUser() {
+    const supabase = createClient()
     const { data, error } = await supabase.auth.getUser()
     return { data, error }
   },
 
   // Get user profile with role
   async getUserProfile(userId: string): Promise<{ data: UserProfile | null, error: unknown }> {
+    const supabase = createClient()
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
@@ -63,6 +69,7 @@ export const auth = {
 
   // Update user profile
   async updateUserProfile(userId: string, updates: Partial<UserProfile>) {
+    const supabase = createClient()
     const { data, error } = await supabase
       .from('user_profiles')
       .update({

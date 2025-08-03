@@ -23,9 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Badge } from '@/components/ui/badge';
-import { useAdminUnreadMessages } from '@/hooks/useAdminUnreadMessages';
-import { useMessageNotifications } from '@/hooks/useMessageNotifications';
+
 import { useLogout } from '@/hooks/useLogout';
 
 const sidebarItems = [
@@ -105,10 +103,10 @@ const AdminLayoutContent = ({ children }: { children: React.ReactNode }) => {
   const { logout } = useLogout();
   
   // Re-enable with optimization
-  const { unreadCount } = useAdminUnreadMessages();
+  //const { unreadCount } = useAdminUnreadMessages();
   
   // Re-enable message notifications
-  useMessageNotifications();
+  //useMessageNotifications();
 
   const SidebarContent = () => (
     <div className="p-6">
@@ -158,11 +156,6 @@ const AdminLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 >
                   <item.icon className="w-4 h-4" />
                   <span className="truncate">{item.title}</span>
-                  {item.href === '/admin/support' && unreadCount > 0 && (
-                    <Badge variant="destructive" className="ml-auto text-xs">
-                      {unreadCount}
-                    </Badge>
-                  )}
                 </Button>
               </Link>
             )}

@@ -1,30 +1,31 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { 
-  Upload, 
-  X, 
+import {
+  Upload,
+  X,
   Plus,
   ArrowLeft,
   Loader2
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useAuthContext } from '@/components/auth/AuthProvider'
 import { useAdminNotifications } from '@/hooks/useAdminNotifications'
+import PoliciesDialog from '@/components/PoliciesDialog'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -54,7 +55,7 @@ export default function NewVehiclePage() {
   const router = useRouter()
   const { user } = useAuthContext()
   const { createNotification } = useAdminNotifications()
-  
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -75,7 +76,19 @@ export default function NewVehiclePage() {
     cargo_volume: '',
     range_miles: '',
     charging_time_hours: '',
+    pickup_location: '',
+    return_location: '',
+    fuel_policy_id: '',
+    return_policy_id: '',
+    cancellation_policy_id: '',
   })
+
+  // New features state
+  const [keyFeatures, setKeyFeatures] = useState<string[]>([])
+  const [newFeature, setNewFeature] = useState('')
+  const [specifications, setSpecifications] = useState<Record<string, string>>({})
+  const [offers, setOffers] = useState<string[]>([])
+  const [newOffer, setNewOffer] = useState('')
 
   // Attribute data
   const [vehicleTypes, setVehicleTypes] = useState<VehicleAttribute[]>([])
@@ -92,12 +105,9 @@ export default function NewVehiclePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const supabase = createClient()
 
-  useEffect(() => {
-    fetchAttributes()
-  }, [])
-
-  const fetchAttributes = async () => {
+  const fetchAttributes = useCallback(async () => {
     try {
       const [
         typesResult,
@@ -121,24 +131,66 @@ export default function NewVehiclePage() {
     } catch (err: unknown) {
       setError('Failed to load form data: ' + (err instanceof Error ? err.message : 'Unknown error'))
     }
-  }
+  }, [supabase])
 
-  const filteredModels = models.filter(model => 
+  useEffect(() => {
+    fetchAttributes()
+  }, [fetchAttributes])
+
+
+  const filteredModels = models.filter(model =>
     model.brand_id === parseInt(formData.brand_id)
   )
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    
+
     // Reset model selection when brand changes
     if (field === 'brand_id') {
       setFormData(prev => ({ ...prev, model_id: '' }))
     }
   }
 
+  const addKeyFeature = () => {
+    if (newFeature.trim() && !keyFeatures.includes(newFeature.trim())) {
+      setKeyFeatures(prev => [...prev, newFeature.trim()])
+      setNewFeature('')
+    }
+  }
+
+  const removeKeyFeature = (feature: string) => {
+    setKeyFeatures(prev => prev.filter(f => f !== feature))
+  }
+
+  const addOffer = () => {
+    if (newOffer.trim() && !offers.includes(newOffer.trim())) {
+      setOffers(prev => [...prev, newOffer.trim()])
+      setNewOffer('')
+    }
+  }
+
+  const removeOffer = (offer: string) => {
+    setOffers(prev => prev.filter(o => o !== offer))
+  }
+
+  const updateSpecification = (key: string, value: string) => {
+    setSpecifications(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+
+  const removeSpecification = (key: string) => {
+    setSpecifications(prev => {
+      const updated = { ...prev }
+      delete updated[key]
+      return updated
+    })
+  }
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
-    
+
     files.forEach(file => {
       if (!file.type.startsWith('image/')) {
         setError('Please select only image files')
@@ -158,7 +210,7 @@ export default function NewVehiclePage() {
       }
 
       setImages(prev => [...prev, imageFile])
-      
+
       // Set first image as primary
       if (images.length === 0) {
         setPrimaryImageId(imageId)
@@ -172,14 +224,14 @@ export default function NewVehiclePage() {
   const removeImage = (imageId: string) => {
     setImages(prev => {
       const filtered = prev.filter(img => img.id !== imageId)
-      
+
       // If removing primary image, set new primary
       if (primaryImageId === imageId && filtered.length > 0) {
         setPrimaryImageId(filtered[0].id)
       } else if (filtered.length === 0) {
         setPrimaryImageId('')
       }
-      
+
       return filtered
     })
   }
@@ -188,7 +240,7 @@ export default function NewVehiclePage() {
     const uploadPromises = images.map(async (imageFile, index) => {
       const fileExt = imageFile.file.name.split('.').pop()
       const fileName = `${user?.id}/${vehicleId}/${imageFile.id}.${fileExt}`
-      
+
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('vehicle-images')
@@ -255,7 +307,7 @@ export default function NewVehiclePage() {
 
       // Create vehicle record
       const vehicleData = {
-        owner_id: user?.id,
+        seller_id: user!.id, // Use non-null assertion since we check for user above
         name: formData.name,
         description: formData.description,
         year: formData.year,
@@ -274,6 +326,14 @@ export default function NewVehiclePage() {
         cargo_volume: formData.cargo_volume ? parseInt(formData.cargo_volume) : null,
         range_miles: formData.range_miles ? parseInt(formData.range_miles) : null,
         charging_time_hours: formData.charging_time_hours ? parseInt(formData.charging_time_hours) : null,
+        key_features: keyFeatures.length > 0 ? keyFeatures : null,
+        specifications: Object.keys(specifications).length > 0 ? specifications : null,
+        offers: offers.length > 0 ? offers : null,
+        pickup_location: formData.pickup_location || null,
+        return_location: formData.return_location || null,
+        fuel_policy_id: formData.fuel_policy_id ? parseInt(formData.fuel_policy_id) : null,
+        return_policy_id: formData.return_policy_id ? parseInt(formData.return_policy_id) : null,
+        cancellation_policy_id: formData.cancellation_policy_id ? parseInt(formData.cancellation_policy_id) : null,
         status: 'pending'
       }
 
@@ -302,12 +362,12 @@ export default function NewVehiclePage() {
       )
 
       setSuccess('Vehicle submitted successfully! It will be reviewed by our team.')
-      
+
       // Redirect after a delay
       setTimeout(() => {
         router.push('/seller/vehicles')
       }, 2000)
-      
+
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
@@ -492,7 +552,7 @@ export default function NewVehiclePage() {
 
               <div>
                 <Label htmlFor="model">Model</Label>
-                <Select 
+                <Select
                   value={formData.model_id}
                   onValueChange={(value) => handleInputChange('model_id', value)}
                   disabled={!formData.brand_id}
@@ -642,6 +702,240 @@ export default function NewVehiclePage() {
           </CardContent>
         </Card>
 
+        {/* Key Features */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Key Features</CardTitle>
+            <CardDescription>
+              Add key features that make your vehicle stand out (e.g., &quot;Autopilot&quot;, &quot;Fast charging&quot;, &quot;All-wheel drive&quot;)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={newFeature}
+                onChange={(e) => setNewFeature(e.target.value)}
+                placeholder="Enter a key feature..."
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyFeature())}
+              />
+              <Button type="button" onClick={addKeyFeature} disabled={!newFeature.trim()}>
+                Add
+              </Button>
+            </div>
+            {keyFeatures.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {keyFeatures.map((feature, index) => (
+                  <div key={index} className="bg-green-100 text-green-800 px-3 py-1 rounded-full flex items-center gap-2">
+                    <span className="text-sm">{feature}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeKeyFeature(feature)}
+                      className="text-green-600 hover:text-green-800"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Vehicle Specifications */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Additional Specifications</CardTitle>
+            <CardDescription>
+              Add custom specifications for your vehicle (e.g., &quot;Battery Type: Lithium-ion&quot;, &quot;Charging Port: CCS&quot;)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                placeholder="Specification name (e.g., Battery Type)"
+                id="spec-key"
+              />
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Specification value (e.g., Lithium-ion)"
+                  id="spec-value"
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const keyInput = document.getElementById('spec-key') as HTMLInputElement
+                    const valueInput = document.getElementById('spec-value') as HTMLInputElement
+                    if (keyInput.value.trim() && valueInput.value.trim()) {
+                      updateSpecification(keyInput.value.trim(), valueInput.value.trim())
+                      keyInput.value = ''
+                      valueInput.value = ''
+                    }
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+            {Object.keys(specifications).length > 0 && (
+              <div className="space-y-2">
+                {Object.entries(specifications).map(([key, value]) => (
+                  <div key={key} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                    <div>
+                      <span className="font-medium">{key}:</span> <span className="text-gray-600">{value}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeSpecification(key)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Special Offers */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Special Offers</CardTitle>
+            <CardDescription>
+              Add special offers or amenities (e.g., &quot;Free delivery within 10 miles&quot;, &quot;24/7 roadside assistance&quot;)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={newOffer}
+                onChange={(e) => setNewOffer(e.target.value)}
+                placeholder="Enter a special offer..."
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addOffer())}
+              />
+              <Button type="button" onClick={addOffer} disabled={!newOffer.trim()}>
+                Add
+              </Button>
+            </div>
+            {offers.length > 0 && (
+              <div className="space-y-2">
+                {offers.map((offer, index) => (
+                  <div key={index} className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex items-center justify-between">
+                    <span className="text-blue-800">{offer}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeOffer(offer)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Pickup and Return Locations */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pickup & Return Locations</CardTitle>
+            <CardDescription>
+              Specify where customers can pick up and return the vehicle
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="pickup_location">Pickup Location</Label>
+                <Input
+                  id="pickup_location"
+                  value={formData.pickup_location}
+                  onChange={(e) => handleInputChange('pickup_location', e.target.value)}
+                  placeholder="e.g., 123 Main St, San Francisco, CA"
+                />
+              </div>
+              <div>
+                <Label htmlFor="return_location">Return Location</Label>
+                <Input
+                  id="return_location"
+                  value={formData.return_location}
+                  onChange={(e) => handleInputChange('return_location', e.target.value)}
+                  placeholder="Same as pickup or different address"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Policies */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Rental Policies</CardTitle>
+            <CardDescription>
+              Select the policies that apply to your vehicle rental
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="fuel_policy">Fuel Policy</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="fuel_policy"
+                    value={formData.fuel_policy_id}
+                    onChange={(e) => handleInputChange('fuel_policy_id', e.target.value)}
+                    placeholder="Select fuel policy"
+                    readOnly
+                  />
+                  <PoliciesDialog
+                    policyType="fuel"
+                    selectedPolicyId={formData.fuel_policy_id ? parseInt(formData.fuel_policy_id) : undefined}
+                    onPolicySelect={(id) => handleInputChange('fuel_policy_id', id.toString())}
+                    trigger={<Button type="button" variant="outline" size="sm">Select</Button>}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="return_policy">Return Policy</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="return_policy"
+                    value={formData.return_policy_id}
+                    onChange={(e) => handleInputChange('return_policy_id', e.target.value)}
+                    placeholder="Select return policy"
+                    readOnly
+                  />
+                  <PoliciesDialog
+                    policyType="return"
+                    selectedPolicyId={formData.return_policy_id ? parseInt(formData.return_policy_id) : undefined}
+                    onPolicySelect={(id) => handleInputChange('return_policy_id', id.toString())}
+                    trigger={<Button type="button" variant="outline" size="sm">Select</Button>}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="cancellation_policy">Cancellation Policy</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="cancellation_policy"
+                    value={formData.cancellation_policy_id}
+                    onChange={(e) => handleInputChange('cancellation_policy_id', e.target.value)}
+                    placeholder="Select cancellation policy"
+                    readOnly
+                  />
+                  <PoliciesDialog
+                    policyType="cancellation"
+                    selectedPolicyId={formData.cancellation_policy_id ? parseInt(formData.cancellation_policy_id) : undefined}
+                    onPolicySelect={(id) => handleInputChange('cancellation_policy_id', id.toString())}
+                    trigger={<Button type="button" variant="outline" size="sm">Select</Button>}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Images */}
         <Card>
           <CardHeader>
@@ -682,20 +976,19 @@ export default function NewVehiclePage() {
                       alt="Vehicle preview"
                       width={128}
                       height={128}
-                      className={`w-full h-32 object-cover rounded-lg border-2 ${
-                        image.id === primaryImageId 
-                          ? 'border-green-500' 
-                          : 'border-gray-200'
-                      }`}
+                      className={`w-full h-32 object-cover rounded-lg border-2 ${image.id === primaryImageId
+                        ? 'border-green-500'
+                        : 'border-gray-200'
+                        }`}
                     />
-                    
+
                     {/* Primary badge */}
                     {image.id === primaryImageId && (
                       <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
                         Primary
                       </div>
                     )}
-                    
+
                     {/* Action buttons */}
                     <div className="absolute top-2 right-2 flex gap-1">
                       {image.id !== primaryImageId && (

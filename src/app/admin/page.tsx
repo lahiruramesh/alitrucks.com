@@ -5,12 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Truck, Tag, Building2, Car, Target, Fuel, Plus, TrendingUp } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { createClient } from '@/lib/supabase';
 
 interface Stats {
   vehicleTypes: number;
@@ -38,6 +33,7 @@ const AdminPage = () => {
 
   const fetchStats = async () => {
     try {
+      const supabase = createClient()
       const [vehicleTypes, vehicleCategories, brands, models, rentalPurposes, fuelTypes] = await Promise.all([
         supabase.from('vehicle_types').select('id', { count: 'exact', head: true }),
         supabase.from('vehicle_categories').select('id', { count: 'exact', head: true }),

@@ -34,7 +34,6 @@ export default function BuyerMessagesPage() {
       {/* Chat Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ConversationList
-          userRole="buyer"
           selectedConversationId={selectedConversationId}
           onConversationSelect={handleConversationSelect}
           onNewConversation={handleNewConversation}

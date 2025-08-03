@@ -11,9 +11,10 @@ const updateBookingSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -48,7 +49,7 @@ export async function GET(
           phone
         )
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
       .single()
 
@@ -66,9 +67,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -82,7 +84,7 @@ export async function PATCH(
     const { data: existingBooking, error: fetchError } = await supabase
       .from('bookings')
       .select('id, buyer_id, seller_id, status')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (fetchError || !existingBooking) {
@@ -94,7 +96,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const updateData: any = { ...validatedData }
+    const updateData: Record<string, unknown> = { ...validatedData }
 
     if (validatedData.status === 'confirmed' && existingBooking.status === 'pending') {
       updateData.confirmed_at = new Date().toISOString()
@@ -111,7 +113,7 @@ export async function PATCH(
     const { data: booking, error } = await supabase
       .from('bookings')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 

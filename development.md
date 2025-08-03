@@ -973,6 +973,12 @@ npm run start            # Production server
 
 ---
 
+Use schadcn commands to add new components
+```bash
+pnpm dlx shadcn@latest add tabs
+
+```
+
 **Happy Coding! 🚀**
 
 *Last updated: June 30, 2025*

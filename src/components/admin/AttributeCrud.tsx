@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase';
+import { Database } from '@/types/database';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,18 +10,13 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Edit, Trash2, Plus, Save, X } from 'lucide-react';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
 interface Attribute {
   id: number;
   name: string;
 }
 
 interface AttributeCrudProps {
-  tableName: string;
+  tableName: keyof Database['public']['Tables'];
   title: string;
   description?: string;
 }
@@ -34,9 +30,10 @@ const AttributeCrud: React.FC<AttributeCrudProps> = ({ tableName, title, descrip
 
   const fetchAttributes = useCallback(async () => {
     setLoading(true);
+    const supabase = createClient();
     const { data, error } = await supabase.from(tableName).select('*').order('name', { ascending: true });
     if (error) console.error('Error fetching attributes:', error);
-    else setAttributes(data as Attribute[]);
+    else setAttributes((data as unknown) as Attribute[]);
     setLoading(false);
   }, [tableName]);
 
@@ -48,6 +45,7 @@ const AttributeCrud: React.FC<AttributeCrudProps> = ({ tableName, title, descrip
     if (!newAttributeName.trim()) return;
     setAdding(true);
     
+    const supabase = createClient();
     const { data, error } = await supabase
       .from(tableName)
       .insert([{ name: newAttributeName.trim() }])
@@ -56,7 +54,7 @@ const AttributeCrud: React.FC<AttributeCrudProps> = ({ tableName, title, descrip
     if (error) {
       console.error('Error adding attribute:', error);
     } else if (data) {
-      setAttributes([...attributes, data[0]]);
+      setAttributes([...attributes, (data[0] as unknown) as Attribute]);
       setNewAttributeName('');
     }
     setAdding(false);
@@ -65,6 +63,7 @@ const AttributeCrud: React.FC<AttributeCrudProps> = ({ tableName, title, descrip
   const handleUpdate = async () => {
     if (!editingAttribute || !editingAttribute.name.trim()) return;
     
+    const supabase = createClient();
     const { data, error } = await supabase
       .from(tableName)
       .update({ name: editingAttribute.name.trim() })
@@ -75,13 +74,14 @@ const AttributeCrud: React.FC<AttributeCrudProps> = ({ tableName, title, descrip
       console.error('Error updating attribute:', error);
     } else if (data) {
       setAttributes(attributes.map(attr => 
-        attr.id === editingAttribute.id ? data[0] : attr
+        attr.id === editingAttribute.id ? (data[0] as unknown) as Attribute : attr
       ));
       setEditingAttribute(null);
     }
   };
 
   const handleDelete = async (id: number) => {
+    const supabase = createClient();
     const { error } = await supabase.from(tableName).delete().eq('id', id);
     if (error) {
       console.error('Error deleting attribute:', error);

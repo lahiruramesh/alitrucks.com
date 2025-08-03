@@ -5,10 +5,10 @@ import SearchBar from '@/components/SearchBar'
 import CompactSearchBar from '@/components/CompactSearchBar'
 import TruckCard from '@/components/TruckCard'
 import Navigation from '@/components/Navigation'
-import TruckFilters from '@/components/TruckFilters'
+import DatabaseFilters from '@/components/DatabaseFilters'
 import TruckSort, { SortOption } from '@/components/TruckSort'
 import { Suspense, useState, useMemo, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { Vehicle } from '@/types/database'
 
 type VehicleWithDetails = Vehicle & {
@@ -18,121 +18,49 @@ type VehicleWithDetails = Vehicle & {
   models: {
     name: string
   } | null
+  vehicle_images: {
+    image_url: string
+    is_primary: boolean
+  }[] | null
 }
 
-// Fallback dummy data (kept as backup)
-const fallbackTrucks = [
-  {
-    id: 1,
-    name: "Tesla Semi Electric Truck",
-    image: "/api/placeholder/400/300",
-    price: 249,
-    rating: 4.9,
-    reviews: 128,
-    location: "San Francisco, CA",
-    distance: "2.3 miles away",
-    features: ["Autopilot", "500 mile range", "Fast charging"]
-  },
-  {
-    id: 2,
-    name: "Rivian Electric Delivery Van",
-    image: "/api/placeholder/350/250",
-    price: 189,
-    rating: 4.8,
-    reviews: 95,
-    location: "Oakland, CA",
-    distance: "5.1 miles away",
-    features: ["All-wheel drive", "400 mile range", "Cargo space"]
-  },
-  {
-    id: 3,
-    name: "Ford E-Transit Electric Van",
-    image: "/api/placeholder/320/240",
-    price: 179,
-    rating: 4.7,
-    reviews: 67,
-    location: "San Jose, CA",
-    distance: "8.2 miles away",
-    features: ["Pro Power Onboard", "126 mile range", "Fleet ready"]
-  },
-  {
-    id: 4,
-    name: "Mercedes eSprinter",
-    image: "/api/placeholder/380/280",
-    price: 219,
-    rating: 4.8,
-    reviews: 84,
-    location: "Palo Alto, CA",
-    distance: "4.7 miles away",
-    features: ["MBUX system", "273 mile range", "Premium interior"]
-  },
-  {
-    id: 5,
-    name: "Volvo FE Electric",
-    image: "/api/placeholder/360/270",
-    price: 199,
-    rating: 4.6,
-    reviews: 76,
-    location: "Berkeley, CA",
-    distance: "6.8 miles away",
-    features: ["Quiet operation", "200 mile range", "Safety systems"]
-  },
-  {
-    id: 6,
-    name: "BYD T3 Electric Truck",
-    image: "/api/placeholder/340/260",
-    price: 159,
-    rating: 4.5,
-    reviews: 52,
-    location: "Fremont, CA",
-    distance: "9.2 miles away",
-    features: ["Iron phosphate battery", "150 mile range", "Compact design"]
-  },
-  {
-    id: 7,
-    name: "Isuzu NPR-EV Electric",
-    image: "/api/placeholder/420/320",
-    price: 169,
-    rating: 4.4,
-    reviews: 43,
-    location: "San Mateo, CA",
-    distance: "7.5 miles away",
-    features: ["Class 4 truck", "120 mile range", "Low maintenance"]
-  },
-  {
-    id: 8,
-    name: "Peterbilt 579EV",
-    image: "/api/placeholder/390/290",
-    price: 299,
-    rating: 4.9,
-    reviews: 67,
-    location: "Santa Clara, CA",
-    distance: "5.4 miles away",
-    features: ["Long haul capable", "400 mile range", "Advanced telematics"]
-  }
-]
+interface FilterState {
+  location: string
+  vehicleType: string
+  vehicleCategory: string
+  brand: string
+  model: string
+  fuelType: string
+  priceRange: number[]
+  minYear: string
+  maxCapacity: string
+}
 
 export default function Home() {
   const [vehicles, setVehicles] = useState<VehicleWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [filters, setFilters] = useState({
-    priceRange: [50, 500] as [number, number],
-    location: [] as string[],
-    rating: 0,
-    features: [] as string[],
-    truckType: [] as string[]
+  const [filters, setFilters] = useState<FilterState>({
+    location: 'all',
+    vehicleType: 'all',
+    vehicleCategory: 'all',
+    brand: 'all',
+    model: 'all',
+    fuelType: 'all',
+    priceRange: [0, 1000],
+    minYear: '',
+    maxCapacity: ''
   })
   const [sortBy, setSortBy] = useState<SortOption>('price-low')
-  const [isMobile, setIsMobile] = useState(false)
+  const supabase = createClient()
 
-  // Fetch only approved vehicles from the database
+  // Fetch approved vehicles from the database with filters
   const fetchVehicles = useCallback(async () => {
     setLoading(true)
     setError(null)
     
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('vehicles')
         .select(`
           *,
@@ -141,10 +69,64 @@ export default function Home() {
           ),
           models (
             name
+          ),
+          vehicle_images (
+            image_url,
+            is_primary
           )
         `)
         .eq('status', 'approved') // Only fetch approved vehicles
-        .order('created_at', { ascending: false })
+
+      // Apply filters
+      if (filters.location && filters.location !== 'all') {
+        query = query.eq('location', filters.location)
+      }
+      if (filters.vehicleType && filters.vehicleType !== 'all') {
+        query = query.eq('vehicle_type_id', parseInt(filters.vehicleType))
+      }
+      if (filters.vehicleCategory && filters.vehicleCategory !== 'all') {
+        query = query.eq('vehicle_category_id', parseInt(filters.vehicleCategory))
+      }
+      if (filters.brand && filters.brand !== 'all') {
+        query = query.eq('brand_id', parseInt(filters.brand))
+      }
+      if (filters.model && filters.model !== 'all') {
+        query = query.eq('model_id', parseInt(filters.model))
+      }
+      if (filters.fuelType && filters.fuelType !== 'all') {
+        query = query.eq('fuel_type_id', parseInt(filters.fuelType))
+      }
+      if (filters.priceRange[0] > 0 || filters.priceRange[1] < 1000) {
+        query = query
+          .gte('price_per_day', filters.priceRange[0])
+          .lte('price_per_day', filters.priceRange[1])
+      }
+      if (filters.minYear) {
+        query = query.gte('year', parseInt(filters.minYear))
+      }
+      if (filters.maxCapacity) {
+        query = query.lte('max_weight_capacity', parseInt(filters.maxCapacity))
+      }
+
+      // Apply sorting
+      switch (sortBy) {
+        case 'price-low':
+          query = query.order('price_per_day', { ascending: true })
+          break
+        case 'price-high':
+          query = query.order('price_per_day', { ascending: false })
+          break
+        case 'rating-high':
+          query = query.order('created_at', { ascending: false }) // TODO: Sort by actual rating
+          break
+        case 'reviews-most':
+          query = query.order('created_at', { ascending: false })
+          break
+        default:
+          query = query.order('created_at', { ascending: false })
+      }
+
+      const { data, error } = await query
 
       if (error) {
         throw error
@@ -154,97 +136,50 @@ export default function Home() {
     } catch (err) {
       console.error('Error fetching vehicles:', err)
       setError('Failed to load vehicles. Please try again.')
-      // Use fallback data in case of error
       setVehicles([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [filters, sortBy, supabase])
 
-  // Fetch vehicles on component mount
+  // Fetch vehicles when filters or sorting changes
   useEffect(() => {
     fetchVehicles()
   }, [fetchVehicles])
 
-  // Detect mobile on mount
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+  // Handle filter changes
+  const handleFiltersChange = useCallback((newFilters: FilterState) => {
+    setFilters(newFilters)
   }, [])
 
+  // Handle search action
+  const handleSearch = useCallback(() => {
+    fetchVehicles()
+  }, [fetchVehicles])
+
   // Transform vehicle data to match truck card expectations
-  const transformVehicleToTruck = (vehicle: VehicleWithDetails) => ({
-    id: vehicle.id,
-    name: `${vehicle.brands?.name || 'Unknown'} ${vehicle.models?.name || 'Model'}`,
-    image: "/api/placeholder/400/300", // TODO: Use actual vehicle images when available
-    price: vehicle.price_per_day,
-    rating: 4.5, // TODO: Calculate actual rating from reviews
-    reviews: 0, // TODO: Get actual review count
-    location: vehicle.location,
-    distance: "2.3 miles away", // TODO: Calculate actual distance
-    features: vehicle.features ? Object.values(vehicle.features as any) : []
-  })
+  const transformVehicleToTruck = (vehicle: VehicleWithDetails) => {
+    // Get primary image or first image
+    const primaryImage = vehicle.vehicle_images?.find(img => img.is_primary)
+    const imageUrl = primaryImage?.image_url || vehicle.vehicle_images?.[0]?.image_url || "/api/placeholder/400/300"
 
-  const filteredAndSortedVehicles = useMemo(() => {
-    const trucksData = vehicles.map(transformVehicleToTruck)
-    
-    const filtered = trucksData.filter(truck => {
-      // Price filter
-      if (truck.price < filters.priceRange[0] || truck.price > filters.priceRange[1]) {
-        return false
-      }
+    return {
+      id: vehicle.id,
+      name: vehicle.name,
+      image: imageUrl,
+      price: vehicle.price_per_day || 0,
+      rating: 4.5, // TODO: Calculate actual rating from reviews
+      reviews: 0, // TODO: Get actual review count
+      location: vehicle.location,
+      distance: "2.3 miles away", // TODO: Calculate actual distance
+      features: vehicle.key_features || []
+    }
+  }
 
-      // Location filter
-      if (filters.location.length > 0 && !filters.location.includes(truck.location)) {
-        return false
-      }
-
-      // Rating filter
-      if (filters.rating > 0 && truck.rating < filters.rating) {
-        return false
-      }
-
-      // Features filter
-      if (filters.features.length > 0) {
-        const hasAllFeatures = filters.features.every(feature => 
-          truck.features.some((truckFeature: any) => 
-            String(truckFeature).toLowerCase().includes(feature.toLowerCase())
-          )
-        )
-        if (!hasAllFeatures) return false
-      }
-
-      return true
-    })
-
-    // Sort the filtered results
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'price-low':
-          return a.price - b.price
-        case 'price-high':
-          return b.price - a.price
-        case 'rating-high':
-          return b.rating - a.rating
-        case 'rating-low':
-          return a.rating - b.rating
-        case 'distance-near':
-          return parseFloat(a.distance) - parseFloat(b.distance)
-        case 'distance-far':
-          return parseFloat(b.distance) - parseFloat(a.distance)
-        case 'reviews-most':
-          return b.reviews - a.reviews
-        case 'reviews-least':
-          return a.reviews - b.reviews
-        default:
-          return 0
-      }
-    })
-
-    return filtered
-  }, [vehicles, filters, sortBy])
+  // Transformed vehicles for display
+  const trucksData = useMemo(() => {
+    return vehicles.map(transformVehicleToTruck)
+  }, [vehicles])
 
   return (
     <div className="min-h-screen bg-white">
@@ -270,122 +205,129 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Trucks Grid */}
+      {/* Trucks Grid with Filters */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-          <div>
-            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">
-              Available Electric Trucks
-            </h2>
-            <p className="text-gray-600 mt-2">
-              {loading ? 'Loading vehicles...' : `${filteredAndSortedVehicles.length} trucks available ${filters.location.length > 0 ? 'in selected areas' : 'in your area'}`}
-            </p>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <TruckFilters 
-              onFiltersChange={setFilters} 
-              isMobile={isMobile}
-            />
-            <TruckSort 
-              onSortChange={setSortBy}
-              currentSort={sortBy}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Filters Sidebar */}
+          <div className="lg:col-span-1">
+            <DatabaseFilters 
+              onFiltersChange={handleFiltersChange}
+              onSearch={handleSearch}
             />
           </div>
-        </div>
 
-        {/* Error State */}
-        {error && (
-          <div className="text-center py-16">
-            <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+              <div>
+                <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">
+                  Available Electric Trucks
+                </h2>
+                <p className="text-gray-600 mt-2">
+                  {loading ? 'Loading vehicles...' : `${trucksData.length} trucks available`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <TruckSort 
+                  onSortChange={setSortBy}
+                  currentSort={sortBy}
+                />
+              </div>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Something went wrong</h3>
-            <p className="text-gray-600 mb-6">{error}</p>
-            <button 
-              onClick={fetchVehicles}
-              className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors"
-            >
-              Try again
-            </button>
-          </div>
-        )}
 
-        {/* Loading State */}
-        {loading && !error && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-80 bg-gray-100 rounded-lg animate-pulse"></div>
-            ))}
-          </div>
-        )}
-        
-        {/* Vehicle Grid */}
-        {!loading && !error && (
-          filteredAndSortedVehicles.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredAndSortedVehicles.map((truck: any) => (
-                  <TruckCard key={truck.id} truck={truck} />
+            {/* Error State */}
+            {error && (
+              <div className="text-center py-16">
+                <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Something went wrong</h3>
+                <p className="text-gray-600 mb-6">{error}</p>
+                <button 
+                  onClick={fetchVehicles}
+                  className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+
+            {/* Loading State */}
+            {loading && !error && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="h-80 bg-gray-100 rounded-lg animate-pulse"></div>
                 ))}
               </div>
+            )}
+            
+                        {/* Vehicle Grid */}
+            {!loading && !error && (
+              trucksData.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {trucksData.map((truck) => (
+                      <TruckCard key={truck.id} truck={truck} />
+                    ))}
+                  </div>
 
-              {/* Load More Button - only show if there are more vehicles */}
-              {filteredAndSortedVehicles.length === vehicles.length && vehicles.length >= 8 && (
-                <div className="flex justify-center mt-12">
+                  {/* Load More Button - only show if there are more vehicles */}
+                  {trucksData.length >= 12 && (
+                    <div className="flex justify-center mt-12">
+                      <button 
+                        onClick={fetchVehicles}
+                        className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors"
+                      >
+                        Load More Trucks
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-16">
+                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.562M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No trucks found</h3>
+                  <p className="text-gray-600 mb-6">Try adjusting your search criteria or clearing filters</p>
                   <button 
-                    onClick={fetchVehicles}
-                    className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-full transition-colors"
+                    onClick={() => setFilters({
+                      location: 'all',
+                      vehicleType: 'all',
+                      vehicleCategory: 'all',
+                      brand: 'all',
+                      model: 'all',
+                      fuelType: 'all',
+                      priceRange: [0, 1000],
+                      minYear: '',
+                      maxCapacity: ''
+                    })}
+                    className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors"
                   >
-                    Load more trucks
+                    Clear Filters
                   </button>
                 </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-16">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No trucks found</h3>
-              <p className="text-gray-600 mb-6">
-                {vehicles.length === 0 
-                  ? "No approved vehicles are currently available. Please check back later." 
-                  : "Try adjusting your filters to see more results"
-                }
-              </p>
-              <button 
-                onClick={() => setFilters({
-                  priceRange: [50, 500],
-                  location: [],
-                  rating: 0,
-                  features: [],
-                  truckType: []
-                })}
-                className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors"
-              >
-                Clear all filters
-              </button>
-            </div>
-          )
-        )}
+              )
+            )}
+          </div>
+        </div>
       </div>
-
-      {/* Features Section */}
+      
+      {/* Featured Section */}
       <div className="bg-gray-50 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Why Choose AliTrucks?
+              Why Choose Our Electric Trucks?
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              The sustainable future of transportation is here
+              Join the sustainable transportation revolution with our verified fleet of electric trucks.
             </p>
           </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">

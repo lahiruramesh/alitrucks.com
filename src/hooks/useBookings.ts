@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from './useAuth'
 import { Booking } from '@/types/database'
 
@@ -14,8 +14,8 @@ interface UseBookingsReturn {
   bookings: Booking[]
   loading: boolean
   error: string | null
-  createBooking: (bookingData: any) => Promise<Booking | null>
-  updateBooking: (id: string, updates: any) => Promise<Booking | null>
+  createBooking: (bookingData: Record<string, unknown>) => Promise<Booking | null>
+  updateBooking: (id: string, updates: Record<string, unknown>) => Promise<Booking | null>
   refreshBookings: () => Promise<void>
 }
 
@@ -26,7 +26,7 @@ export function useBookings(options: UseBookingsOptions = {}): UseBookingsReturn
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     if (!user) {
       setBookings([])
       setLoading(false)
@@ -55,9 +55,9 @@ export function useBookings(options: UseBookingsOptions = {}): UseBookingsReturn
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, role, status])
 
-  const createBooking = async (bookingData: any): Promise<Booking | null> => {
+  const createBooking = async (bookingData: Record<string, unknown>): Promise<Booking | null> => {
     try {
       setError(null)
       
@@ -85,7 +85,7 @@ export function useBookings(options: UseBookingsOptions = {}): UseBookingsReturn
     }
   }
 
-  const updateBooking = async (id: string, updates: any): Promise<Booking | null> => {
+  const updateBooking = async (id: string, updates: Record<string, unknown>): Promise<Booking | null> => {
     try {
       setError(null)
 
@@ -126,7 +126,7 @@ export function useBookings(options: UseBookingsOptions = {}): UseBookingsReturn
     if (autoRefresh) {
       fetchBookings()
     }
-  }, [user, role, status, autoRefresh])
+  }, [user, role, status, autoRefresh, fetchBookings])
 
   return {
     bookings,

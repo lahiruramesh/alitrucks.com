@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { Vehicle } from '@/types/database'
 import { useAdminNotifications } from '@/hooks/useAdminNotifications'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
-import { CheckCircle, XCircle, Clock } from 'lucide-react'
+import { CheckCircle, XCircle } from 'lucide-react'
+import TruckDetailGallery from '@/components/TruckDetailGallery'
 
 type VehicleWithSeller = Vehicle & {
   user_profiles: {
@@ -23,6 +24,13 @@ type VehicleWithSeller = Vehicle & {
   models: {
     name: string
   } | null
+  vehicle_images: {
+    id: number
+    image_url: string
+    is_primary: boolean
+    display_order: number
+    alt_text: string | null
+  }[]
 }
 
 export default function VehicleApprovalPage() {
@@ -33,6 +41,7 @@ export default function VehicleApprovalPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('pending')
   const { createNotification } = useAdminNotifications()
+  const supabase = createClient()
 
   const fetchVehicles = useCallback(async () => {
     setLoading(true)
@@ -41,15 +50,22 @@ export default function VehicleApprovalPage() {
       .select(
         `
         *,
-        user_profiles (
+        user_profiles!vehicles_seller_id_fkey (
           full_name,
           email
         ),
-        brands (
+        brands!vehicles_brand_id_fkey (
           name
         ),
-        models (
+        models!vehicles_model_id_fkey (
           name
+        ),
+        vehicle_images (
+          id,
+          image_url,
+          is_primary,
+          display_order,
+          alt_text
         )
       `
       )
@@ -60,10 +76,10 @@ export default function VehicleApprovalPage() {
       setError('Failed to fetch vehicles for approval.')
       console.error(error)
     } else {
-      setVehicles(data as VehicleWithSeller[])
+      setVehicles(data as unknown as VehicleWithSeller[])
     }
     setLoading(false)
-  }, [])
+  }, [supabase])
 
   useEffect(() => {
     fetchVehicles()
@@ -73,7 +89,8 @@ export default function VehicleApprovalPage() {
     setSuccess(null)
     setError(null)
     
-    const vehicle = vehicles.find(v => v.id === id)
+    const vehicleId = parseInt(id)
+    const vehicle = vehicles.find(v => v.id === vehicleId)
     if (!vehicle) return
 
     const { error } = await supabase
@@ -83,7 +100,7 @@ export default function VehicleApprovalPage() {
         updated_at: new Date().toISOString(),
         rejection_reason: newStatus === 'rejected' ? rejectionReason || 'Vehicle rejected by admin' : null
       })
-      .eq('id', id)
+      .eq('id', vehicleId)
 
     if (error) {
       setError(`Failed to ${newStatus === 'approved' ? 'approve' : 'reject'} vehicle.`)
@@ -120,7 +137,7 @@ export default function VehicleApprovalPage() {
         updated_at: new Date().toISOString(),
         rejection_reason: newStatus === 'rejected' ? 'Bulk rejection by admin' : null
       })
-      .in('id', Array.from(selectedVehicles))
+      .in('id', Array.from(selectedVehicles).map(id => parseInt(id)))
 
     if (error) {
       setError(`Failed to ${newStatus === 'approved' ? 'approve' : 'reject'} selected vehicles.`)
@@ -158,7 +175,7 @@ export default function VehicleApprovalPage() {
     if (selectedVehicles.size === filteredVehicles.length) {
       setSelectedVehicles(new Set())
     } else {
-      setSelectedVehicles(new Set(filteredVehicles.map(v => v.id)))
+      setSelectedVehicles(new Set(filteredVehicles.map(v => String(v.id))))
     }
   }
 
@@ -237,49 +254,94 @@ export default function VehicleApprovalPage() {
                 <p>No vehicles in this category.</p>
               ) : (
                 filteredVehicles.map(vehicle => (
-                  <Card key={vehicle.id}>
+                  <Card key={vehicle.id} className="overflow-hidden">
                     <CardHeader>
                       <div className="flex items-center gap-2">
                         {activeTab === 'pending' && (
                           <Checkbox
-                            checked={selectedVehicles.has(vehicle.id)}
-                            onCheckedChange={() => toggleVehicleSelection(vehicle.id)}
+                            checked={selectedVehicles.has(String(vehicle.id))}
+                            onCheckedChange={() => toggleVehicleSelection(String(vehicle.id))}
                           />
                         )}
                         <div>
-                          <CardTitle>{vehicle.brands?.name} {vehicle.models?.name}</CardTitle>
-                          <CardDescription>Reg: {vehicle.vehicle_registration_number}</CardDescription>
+                          <CardTitle className="text-lg">{vehicle.brands?.name} {vehicle.models?.name}</CardTitle>
+                          <CardDescription className="text-sm">
+                            Reg: {vehicle.vehicle_registration_number} • {vehicle.year}
+                          </CardDescription>
                         </div>
                       </div>
                     </CardHeader>
+                    
+                    {/* Vehicle Images */}
+                    {vehicle.vehicle_images && vehicle.vehicle_images.length > 0 && (
+                      <div className="px-6 pb-4">
+                        <TruckDetailGallery 
+                          images={vehicle.vehicle_images
+                            .sort((a: { display_order: number }, b: { display_order: number }) => a.display_order - b.display_order)
+                            .map((img: { image_url: string }) => img.image_url)
+                          } 
+                        />
+                      </div>
+                    )}
+                    
                     <CardContent className="space-y-4">
-                      <div>
-                        <h4 className="font-semibold">Seller:</h4>
-                        <p>{vehicle.user_profiles?.full_name || 'N/A'} ({vehicle.user_profiles?.email})</p>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <h4 className="font-semibold text-gray-700">Seller:</h4>
+                          <p className="text-gray-600">{vehicle.user_profiles?.full_name || 'N/A'}</p>
+                          <p className="text-gray-500 text-xs">{vehicle.user_profiles?.email}</p>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-700">Status:</h4>
+                          <Badge variant={
+                            vehicle.status === 'approved' ? 'default' : 
+                            vehicle.status === 'rejected' ? 'destructive' : 
+                            'secondary'
+                          }>
+                            {vehicle.status.charAt(0).toUpperCase() + vehicle.status.slice(1)}
+                          </Badge>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-semibold">Status:</h4>
-                        <Badge variant={
-                          vehicle.status === 'approved' ? 'default' : 
-                          vehicle.status === 'rejected' ? 'destructive' : 
-                          'secondary'
-                        }>
-                          {vehicle.status}
-                        </Badge>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <h4 className="font-semibold text-gray-700">Year & Location:</h4>
+                          <p className="text-gray-600">{vehicle.year} • {vehicle.location}</p>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-700">Daily Rate:</h4>
+                          <p className="text-green-600 font-semibold">${vehicle.price_per_day}/day</p>
+                        </div>
                       </div>
-                      {activeTab === 'pending' && !selectedVehicles.has(vehicle.id) && (
+                      
+                      {vehicle.description && (
+                        <div>
+                          <h4 className="font-semibold text-gray-700 text-sm">Description:</h4>
+                          <p className="text-gray-600 text-sm line-clamp-3">{vehicle.description}</p>
+                        </div>
+                      )}
+                      
+                      {vehicle.rejection_reason && (
+                        <div className="bg-red-50 p-3 rounded-lg">
+                          <h4 className="font-semibold text-red-700 text-sm">Rejection Reason:</h4>
+                          <p className="text-red-600 text-sm">{vehicle.rejection_reason}</p>
+                        </div>
+                      )}
+                      
+                      {activeTab === 'pending' && !selectedVehicles.has(String(vehicle.id)) && (
                         <div className="flex gap-2 pt-4">
                           <Button 
-                            onClick={() => handleApproval(vehicle.id, 'approved')} 
+                            onClick={() => handleApproval(String(vehicle.id), 'approved')} 
                             size="sm" 
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-green-600 hover:bg-green-700 flex-1"
                           >
                             <CheckCircle className="w-4 h-4 mr-2" /> Approve
                           </Button>
                           <Button 
-                            onClick={() => handleApproval(vehicle.id, 'rejected')} 
+                            onClick={() => handleApproval(String(vehicle.id), 'rejected')} 
                             size="sm" 
                             variant="destructive"
+                            className="flex-1"
                           >
                             <XCircle className="w-4 h-4 mr-2" /> Reject
                           </Button>

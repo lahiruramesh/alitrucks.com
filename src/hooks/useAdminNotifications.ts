@@ -1,24 +1,29 @@
-import { useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useState, useCallback } from 'react'
+import { createClient } from '@/lib/supabase'
 
 export interface AdminNotification {
   id: string
-  type: 'vehicle_submitted' | 'vehicle_approved' | 'vehicle_rejected' | 'new_user'
+  user_id: string
+  type: string
   title: string
   message: string
-  data?: any
+  data?: Record<string, unknown>
   read: boolean
   created_at: string
 }
 
 export function useAdminNotifications() {
+  const [notifications, setNotifications] = useState<AdminNotification[]>([])
+
   const createNotification = useCallback(async (
-    type: AdminNotification['type'],
+    type: string,
     title: string,
     message: string,
-    data?: any
+    data?: Record<string, unknown>
   ) => {
     try {
+      const supabase = createClient()
+      
       // Get all admin users
       const { data: admins, error: adminError } = await supabase
         .from('user_profiles')
@@ -26,68 +31,79 @@ export function useAdminNotifications() {
         .eq('role', 'admin')
 
       if (adminError) {
-        console.error('Error fetching admins:', adminError)
-        return
+        throw adminError
       }
 
       // Create notifications for all admins
-      const notifications = admins.map(admin => ({
+      const notifications = admins.map((admin: { id: string }) => ({
         user_id: admin.id,
         type,
         title,
         message,
-        data,
+        data: data || null,
         read: false
       }))
 
       const { error: insertError } = await supabase
         .from('admin_notifications')
-        .insert(notifications)
+        .insert(notifications as never)
 
       if (insertError) {
-        console.error('Error creating notifications:', insertError)
+        throw insertError
       }
+
+      return { success: true }
     } catch (error) {
-      console.error('Error in createNotification:', error)
+      console.error('Error creating notification:', error)
+      return { success: false, error }
     }
   }, [])
 
   const markAsRead = useCallback(async (notificationId: string) => {
     try {
+      const supabase = createClient()
       const { error } = await supabase
         .from('admin_notifications')
         .update({ read: true })
         .eq('id', notificationId)
 
       if (error) {
-        console.error('Error marking notification as read:', error)
+        throw error
       }
+
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId ? { ...notif, read: true } : notif
+        )
+      )
     } catch (error) {
-      console.error('Error in markAsRead:', error)
+      console.error('Error marking notification as read:', error)
     }
   }, [])
 
   const getUnreadCount = useCallback(async (userId: string) => {
     try {
+      const supabase = createClient()
       const { count, error } = await supabase
         .from('admin_notifications')
-        .select('id', { count: 'exact' })
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('read', false)
 
       if (error) {
-        console.error('Error getting unread count:', error)
-        return 0
+        throw error
       }
 
       return count || 0
     } catch (error) {
-      console.error('Error in getUnreadCount:', error)
+      console.error('Error getting unread count:', error)
       return 0
     }
   }, [])
 
   return {
+    notifications,
     createNotification,
     markAsRead,
     getUnreadCount

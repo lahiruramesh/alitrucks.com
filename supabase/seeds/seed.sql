@@ -1,9 +1,34 @@
 -- ============================================================================
 -- AliTrucks Database Seed Script
 -- ============================================================================
--- This script seeds the database with sample data for development and testing
--- Note: Creates user profiles that can be linked to auth users via signup
--- Test accounts can be created through the Supabase Auth API or dashboard
+-- -- This script seeds the database with sample data for development and testing
+-- -- Note: Creates user profiles that can be linked to auth users via signup
+-- -- Test accounts can be created through the Supabase Auth API or dashboard
+
+-- -- ============================================================================
+-- -- CREATE TEST USERS IN SUPABASE AUTH
+-- -- ============================================================================
+
+-- -- Insert users into auth.users (requires superuser privileges)
+-- -- Password: Asd123 (hashed using bcrypt)
+-- -- You may need to adjust the hashed password if your Supabase instance uses a different hashing method
+
+-- -- Example bcrypt hash for 'Asd123': $2a$10$wH8vQw6F9QwQw6F9QwQw6eQwQw6F9QwQw6F9QwQw6F9QwQw6F9QwQw6
+-- -- Replace with a valid hash for your environment
+
+-- INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at)
+-- VALUES
+--     ('00000000-0000-0000-0000-000000000001', 'admin@alitrucks.com', '$2a$10$wH8vQw6F9QwQw6F9QwQw6eQwQw6F9QwQw6F9QwQw6F9QwQw6F9QwQw6', NOW()),
+--     ('00000000-0000-0000-0000-000000000002', 'seller@alitrucks.com', '$2a$10$wH8vQw6F9QwQw6F9QwQw6eQwQw6F9QwQw6F9QwQw6F9QwQw6F9QwQw6', NOW()),
+--     ('00000000-0000-0000-0000-000000000003', 'buyer@alitrucks.com', '$2a$10$wH8vQw6F9QwQw6F9QwQw6eQwQw6F9QwQw6F9QwQw6F9QwQw6F9QwQw6', NOW())
+-- ON CONFLICT (email) DO NOTHING;
+
+-- -- The user profile trigger will automatically create user_profiles entries
+
+-- -- Update user_profiles to set the correct roles
+-- UPDATE user_profiles SET role = 'admin' WHERE email = 'admin@alitrucks.com';
+-- UPDATE user_profiles SET role = 'seller' WHERE email = 'seller@alitrucks.com';
+-- UPDATE user_profiles SET role = 'buyer' WHERE email = 'buyer@alitrucks.com';
 
 -- ============================================================================
 -- VEHICLE ATTRIBUTES SEEDING (Reference Data)
@@ -102,27 +127,3 @@ INSERT INTO fuel_types (name) VALUES
 ('Compressed Natural Gas (CNG)'),
 ('Biodiesel')
 ON CONFLICT (name) DO NOTHING;
-
--- ============================================================================
--- SUMMARY
--- ============================================================================
--- Seed data summary:
--- ✅ Vehicle attributes: 8 types, 8 categories, 12 brands, 25+ models, 10 rental purposes, 7 fuel types
--- ❌ User profiles: Skipped - create through Supabase Auth signup instead
--- ❌ Vehicles: Skipped - requires valid auth users first
--- ❌ Images: Skipped - depends on vehicles
--- ❌ Availability: Skipped - depends on vehicles  
--- ❌ Notifications: Skipped - depends on users and vehicles
-
--- To create test users:
--- 1. Use the Supabase Auth signup API or dashboard to create users with these emails:
---    🔑 Admin: admin@alitrucks.com 
---    🔑 Seller: seller@alitrucks.com
---    🔑 Buyer: buyer@alitrucks.com
--- 2. The user profile trigger will automatically create user_profiles entries
--- 3. Manually update the user_profiles to set the correct roles:
---    UPDATE user_profiles SET role = 'admin' WHERE email = 'admin@alitrucks.com';
---    UPDATE user_profiles SET role = 'seller' WHERE email = 'seller@alitrucks.com';
---    UPDATE user_profiles SET role = 'buyer' WHERE email = 'buyer@alitrucks.com';
-
--- The vehicle attribute data is now available for use in the application forms and filters.

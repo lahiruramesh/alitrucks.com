@@ -153,7 +153,6 @@ export default function AdminSupportPage() {
       {/* Chat Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ConversationList
-          userRole="admin"
           selectedConversationId={selectedConversationId}
           onConversationSelect={handleConversationSelect}
           onNewConversation={handleNewConversation}

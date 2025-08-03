@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,11 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Edit, Trash2, Plus, Save, X, Car } from 'lucide-react';
-
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface Model {
   id: number;
@@ -42,6 +37,7 @@ const ModelsPage = () => {
 
   const fetchModels = async () => {
     setLoading(true);
+    const supabase = createClient();
     const { data, error } = await supabase.from('models').select('*').order('name', { ascending: true });
     if (error) console.error('Error fetching models:', error);
     else setModels(data as Model[]);
@@ -49,6 +45,7 @@ const ModelsPage = () => {
   };
 
   const fetchBrands = async () => {
+    const supabase = createClient();
     const { data, error } = await supabase.from('brands').select('*').order('name', { ascending: true });
     if (error) console.error('Error fetching brands:', error);
     else setBrands(data as Brand[]);
@@ -58,6 +55,7 @@ const ModelsPage = () => {
     if (!newModelName.trim() || !newModelBrand) return;
     setAdding(true);
     
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('models')
       .insert([{ name: newModelName.trim(), brand_id: parseInt(newModelBrand) }])
@@ -76,6 +74,7 @@ const ModelsPage = () => {
   const handleUpdate = async () => {
     if (!editingModel || !editingModel.name.trim()) return;
     
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('models')
       .update({ name: editingModel.name.trim(), brand_id: editingModel.brand_id })
@@ -93,6 +92,7 @@ const ModelsPage = () => {
   };
 
   const handleDelete = async (id: number) => {
+    const supabase = createClient();
     const { error } = await supabase.from('models').delete().eq('id', id);
     if (error) {
       console.error('Error deleting model:', error);

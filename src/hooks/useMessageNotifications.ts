@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase';
 import { useAuthContext } from '@/components/auth/AuthProvider';
 import { useNotifications } from '@/components/notifications/NotificationProvider';
 
@@ -11,6 +11,8 @@ export function useMessageNotifications() {
 
   useEffect(() => {
     if (!user) return;
+
+    const supabase = createClient()
 
     // Subscribe to new messages where the user is not the sender
     const messagesChannel = supabase
@@ -23,8 +25,12 @@ export function useMessageNotifications() {
           table: 'messages',
           filter: `sender_id=neq.${user.id}`,
         },
-        async (payload) => {
-          const newMessage = payload.new;
+        async (payload: { new: Record<string, unknown> }) => {
+          const newMessage = payload.new as { 
+            conversation_id: number; 
+            sender_id: string; 
+            content: string;
+          };
           
           // Get conversation details to show more context
           const { data: conversation } = await supabase
@@ -35,7 +41,7 @@ export function useMessageNotifications() {
 
           // Get sender profile for display name
           const { data: profile } = await supabase
-            .from('profiles')
+            .from('user_profiles')
             .select('full_name, role')
             .eq('id', newMessage.sender_id)
             .single();

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase';
 
 
 
@@ -13,6 +13,9 @@ export function useAdminUnreadMessages(enabled: boolean = true) {
       setUnreadCount(0);
       return;
     }
+    
+    const supabase = createClient()
+    
     const fetchUnreadCount = async () => {
       const startTime = performance.now();
       try {

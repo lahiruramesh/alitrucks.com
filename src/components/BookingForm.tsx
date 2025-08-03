@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Booking } from '@/types/database'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +11,7 @@ import { Calendar, Clock, MapPin, CreditCard } from 'lucide-react'
 import { useBookings } from '@/hooks/useBookings'
 interface VehicleWithDetails {
   id: number
-  owner_id: string
+  seller_id: string
   brand_id: number
   model_id: number
   year: number
@@ -21,7 +22,7 @@ interface VehicleWithDetails {
   availability_start_date: string
   availability_end_date: string
   description: string | null
-  features: any
+  key_features: string[] | null
   created_at: string
   updated_at: string
   status: "pending" | "approved" | "rejected"
@@ -33,7 +34,7 @@ interface VehicleWithDetails {
 
 interface BookingFormProps {
   vehicle: VehicleWithDetails
-  onBookingCreated?: (booking: any) => void
+  onBookingCreated?: (booking: Booking) => void
   onCancel?: () => void
 }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { Vehicle } from '@/types/database'
 import { useAuth } from '@/hooks/useAuth'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -27,6 +27,7 @@ export default function SellerVehiclesPage() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('all')
   const { user } = useAuth()
+  const supabase = createClient()
 
   const fetchVehicles = useCallback(async () => {
     if (!user?.id) return
@@ -43,7 +44,7 @@ export default function SellerVehiclesPage() {
           name
         )
       `)
-      .eq('owner_id', user.id)
+      .eq('seller_id', user.id)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -53,7 +54,7 @@ export default function SellerVehiclesPage() {
       setVehicles(data as VehicleWithDetails[])
     }
     setLoading(false)
-  }, [user?.id])
+  }, [user?.id, supabase])
 
   useEffect(() => {
     fetchVehicles()
@@ -202,10 +203,10 @@ export default function SellerVehiclesPage() {
                           <span className="text-gray-600">Year:</span>
                           <span className="font-medium">{vehicle.year}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
+                        {/* <div className="flex justify-between text-sm">
                           <span className="text-gray-600">Color:</span>
                           <span className="font-medium">{vehicle.color}</span>
-                        </div>
+                        </div> */}
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">Price per day:</span>
                           <span className="font-medium">${vehicle.price_per_day}</span>
@@ -229,7 +230,7 @@ export default function SellerVehiclesPage() {
                         <Alert>
                           <Clock className="h-4 w-4" />
                           <AlertDescription>
-                            Your vehicle is under review. You'll be notified once it's approved or if any changes are needed.
+                            Your vehicle is under review. You&apos;ll be notified once it&apos;s approved or if any changes are needed.
                           </AlertDescription>
                         </Alert>
                       )}

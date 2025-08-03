@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { auth, UserProfile, UserRole } from '@/lib/auth'
 
 export interface AuthState {
@@ -27,6 +27,7 @@ export function useAuth() {
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout | null = null
+    const supabase = createClient()
     
     // Set a timeout to prevent indefinite loading
     timeoutId = setTimeout(() => {
@@ -95,7 +96,7 @@ export function useAuth() {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: string, session: Session | null) => {
         try {
           if (session?.user) {
             // Check cache first

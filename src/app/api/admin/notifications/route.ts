@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase-server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const supabaseClient = createRouteHandlerClient({ cookies })
+    const supabase = await createClient()
     
     // Get the current user
-    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
     if (sessionError || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabaseClient
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('role')
       .eq('id', session.user.id)
@@ -26,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get notifications for this admin
-    const { data: notifications, error } = await supabaseClient
+    const { data: notifications, error } = await supabase
       .from('admin_notifications')
       .select('*')
       .eq('user_id', session.user.id)
@@ -48,10 +46,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { type, title, message, data } = body
 
-    const supabaseClient = createRouteHandlerClient({ cookies })
+    const supabase = await createClient()
     
     // Get all admin users
-    const { data: admins, error: adminError } = await supabaseClient
+    const { data: admins, error: adminError } = await supabase
       .from('user_profiles')
       .select('id')
       .eq('role', 'admin')
@@ -61,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create notifications for all admins
-    const notifications = admins.map(admin => ({
+    const notifications = admins.map((admin: { id: string }) => ({
       user_id: admin.id,
       type,
       title,
@@ -70,7 +68,7 @@ export async function POST(request: NextRequest) {
       read: false
     }))
 
-    const { error: insertError } = await supabaseClient
+    const { error: insertError } = await supabase
       .from('admin_notifications')
       .insert(notifications)
 
@@ -90,17 +88,17 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const { notificationId } = body
 
-    const supabaseClient = createRouteHandlerClient({ cookies })
+    const supabase = await createClient()
     
     // Get the current user
-    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
     if (sessionError || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Mark notification as read
-    const { error } = await supabaseClient
+    const { error } = await supabase
       .from('admin_notifications')
       .update({ read: true })
       .eq('id', notificationId)

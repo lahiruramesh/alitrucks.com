@@ -102,7 +102,7 @@ export function BookingManagementCard({
             <Clock className="w-4 h-4 text-gray-500" />
             <div>
               <p className="text-sm font-medium">Pickup</p>
-              <p className="text-sm text-gray-600">{formatTime(booking.pickup_time)}</p>
+              <p className="text-sm text-gray-600">{booking.pickup_time ? formatTime(booking.pickup_time) : 'TBD'}</p>
             </div>
           </div>
           
@@ -110,7 +110,7 @@ export function BookingManagementCard({
             <Clock className="w-4 h-4 text-gray-500" />
             <div>
               <p className="text-sm font-medium">Return</p>
-              <p className="text-sm text-gray-600">{formatTime(booking.return_time)}</p>
+              <p className="text-sm text-gray-600">{booking.return_time ? formatTime(booking.return_time) : 'TBD'}</p>
             </div>
           </div>
           

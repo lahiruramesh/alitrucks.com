@@ -40,7 +40,6 @@ interface Conversation {
 }
 
 interface ConversationListProps {
-  userRole: 'seller' | 'buyer' | 'admin'
   selectedConversationId?: number
   onConversationSelect: (conversationId: number) => void
   onNewConversation: () => void
@@ -71,7 +70,6 @@ const statusColors = {
 }
 
 export default function ConversationList({ 
-  userRole, 
   selectedConversationId, 
   onConversationSelect, 
   onNewConversation 
@@ -83,75 +81,42 @@ export default function ConversationList({
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
 
-  const fetchConversations = useCallback(async () => {
-    // Don't fetch if user is not authenticated or not initialized
+    const loadConversations = useCallback(async () => {
     if (!initialized || !user?.id) {
-      console.log('User not authenticated or not initialized, skipping conversation fetch')
       setLoading(false)
       return
     }
 
+    setLoading(true)
     try {
-      setLoading(true)
-      
-      let query = supabase
+      const { data: conversationsData, error } = await supabase
         .from('conversations')
         .select(`
           *,
-          user_profile:user_id (
-            full_name,
+          conversation_participants!inner (
+            user_id,
             role
+          ),
+          user_profiles!conversation_participants_user_id_fkey (
+            id,
+            full_name,
+            avatar_url
           )
         `)
-        .order('last_message_at', { ascending: false })
+        .eq('conversation_participants.user_id', user.id)
+        .order('updated_at', { ascending: false })
 
-      // Filter based on user role
-      if (userRole === 'admin') {
-        // Admins see all conversations
-      } else {
-        // Sellers and buyers see only their own conversations
-        query = query.eq('user_id', user?.id)
+      if (error) {
+        throw error
       }
 
-      const { data: conversationsData, error } = await query
-
-      if (error) throw error
-
-      // Fetch unread message counts and last messages
-      const conversationsWithDetails = await Promise.all(
-        (conversationsData || []).map(async (conv) => {
-          // Get unread count
-          const { count: unreadCount } = await supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('conversation_id', conv.id)
-            .eq('is_read', false)
-            .neq('sender_id', user?.id)
-
-          // Get last message
-          const { data: lastMessage } = await supabase
-            .from('messages')
-            .select('content, sender_id, created_at')
-            .eq('conversation_id', conv.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single()
-
-          return {
-            ...conv,
-            unread_count: unreadCount || 0,
-            last_message: lastMessage
-          }
-        })
-      )
-
-      setConversations(conversationsWithDetails)
+      setConversations((conversationsData || []) as Conversation[])
     } catch (err: unknown) {
       console.error('Failed to load conversations:', err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
-  }, [initialized, userRole, user])
+  }, [initialized, user])
 
   useEffect(() => {
     // Only fetch conversations if user is authenticated and initialized
@@ -159,22 +124,22 @@ export default function ConversationList({
       setLoading(false)
       return
     }
-    
-    fetchConversations()
-    
+
+    loadConversations()
+
     // Set up real-time subscription
     const subscription = supabase
       .channel('conversations-list')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'conversations' },
         () => {
-          fetchConversations()
+          loadConversations()
         }
       )
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'messages' },
         () => {
-          fetchConversations()
+          loadConversations()
         }
       )
       .subscribe()
@@ -182,7 +147,7 @@ export default function ConversationList({
     return () => {
       subscription.unsubscribe()
     }
-  }, [user?.id, userRole, initialized, fetchConversations])
+  }, [user?.id, initialized, loadConversations])
 
   const filterConversations = useCallback(() => {
     let filtered = conversations
@@ -204,8 +169,8 @@ export default function ConversationList({
   }, [conversations, searchTerm, statusFilter])
 
   useEffect(() => {
-    fetchConversations()
-  }, [fetchConversations])
+    loadConversations()
+  }, [loadConversations])
 
   useEffect(() => {
     filterConversations()

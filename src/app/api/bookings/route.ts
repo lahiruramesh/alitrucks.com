@@ -51,6 +51,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid date range' }, { status: 400 })
     }
 
+    if (!vehicle.price_per_day) {
+      return NextResponse.json({ error: 'Vehicle price not set' }, { status: 400 })
+    }
+
     const subtotal = vehicle.price_per_day * totalDays
     const serviceFee = subtotal * 0.1
     const taxes = subtotal * 0.08
@@ -61,6 +65,7 @@ export async function POST(request: NextRequest) {
       .insert({
         vehicle_id: validatedData.vehicle_id,
         buyer_id: user.id,
+        seller_id: vehicle.seller_id,
         start_date: validatedData.start_date,
         end_date: validatedData.end_date,
         pickup_time: validatedData.pickup_time,
@@ -143,8 +148,8 @@ export async function GET(request: NextRequest) {
       query = query.or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
     }
 
-    if (status) {
-      query = query.eq('status', status)
+    if (status && ['pending', 'confirmed', 'active', 'completed', 'cancelled', 'rejected'].includes(status)) {
+      query = query.eq('status', status as 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled' | 'rejected')
     }
 
     query = query.order('created_at', { ascending: false })

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useAuthContext } from '@/components/auth/AuthProvider'
 
 interface UseUnreadMessages {
@@ -18,12 +18,12 @@ export function useUnreadMessages(): UseUnreadMessages {
   const fetchUnreadCount = useCallback(async () => {
     if (!initialized || !user) {
       setUnreadCount(0)
-      setLoading(false)
       return
     }
 
     try {
       setLoading(true)
+      const supabase = createClient()
       
       // Simplified query for better performance
       const { count, error } = await supabase
@@ -54,6 +54,8 @@ export function useUnreadMessages(): UseUnreadMessages {
     
     fetchUnreadCount()
 
+    const supabase = createClient()
+    
     // Optimized real-time subscription
     const subscription = supabase
       .channel('unread-messages-optimized')
