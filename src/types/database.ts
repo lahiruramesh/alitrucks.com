@@ -293,6 +293,60 @@ export type Database = {
         }
         Relationships: []
       }
+      buyer_profiles: {
+        Row: {
+          address: string | null
+          created_at: string
+          date_of_birth: string
+          driving_license_url: string
+          full_name: string
+          id: string
+          license_expiry_date: string
+          license_number: string
+          phone: string
+          updated_at: string
+          user_id: string
+          verification_notes: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          date_of_birth: string
+          driving_license_url: string
+          full_name: string
+          id?: string
+          license_expiry_date: string
+          license_number: string
+          phone: string
+          updated_at?: string
+          user_id: string
+          verification_notes?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          date_of_birth?: string
+          driving_license_url?: string
+          full_name?: string
+          id?: string
+          license_expiry_date?: string
+          license_number?: string
+          phone?: string
+          updated_at?: string
+          user_id?: string
+          verification_notes?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       conversation_participants: {
         Row: {
           conversation_id: number
@@ -404,6 +458,105 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      coupon_usage: {
+        Row: {
+          booking_id: string | null
+          coupon_id: number | null
+          discount_amount: number
+          id: number
+          used_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          coupon_id?: number | null
+          discount_amount: number
+          id?: number
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          coupon_id?: number | null
+          discount_amount?: number
+          id?: number
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_usage_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_usage_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          discount_type: string
+          discount_value: number
+          id: number
+          is_active: boolean | null
+          maximum_discount: number | null
+          minimum_amount: number | null
+          name: string
+          updated_at: string | null
+          usage_limit: number | null
+          used_count: number | null
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          id?: number
+          is_active?: boolean | null
+          maximum_discount?: number | null
+          minimum_amount?: number | null
+          name: string
+          updated_at?: string | null
+          usage_limit?: number | null
+          used_count?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          id?: number
+          is_active?: boolean | null
+          maximum_discount?: number | null
+          minimum_amount?: number | null
+          name?: string
+          updated_at?: string | null
+          usage_limit?: number | null
+          used_count?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
       }
       fuel_types: {
         Row: {
@@ -539,6 +692,36 @@ export type Database = {
           policy_type?: string
           title?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: number
+          is_active: boolean | null
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          is_active?: boolean | null
+          key: string
+          updated_at?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          is_active?: boolean | null
+          key?: string
+          updated_at?: string | null
+          value?: Json
         }
         Relationships: []
       }
@@ -873,6 +1056,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vehicles_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "vehicles_vehicle_category_id_fkey"
             columns: ["vehicle_category_id"]
             isOneToOne: false
@@ -1059,29 +1249,4 @@ export const Constants = {
     },
   },
 } as const
-
-// Convenience type exports
-export type Vehicle = Database['public']['Tables']['vehicles']['Row']
-export type VehicleInsert = Database['public']['Tables']['vehicles']['Insert']
-export type VehicleUpdate = Database['public']['Tables']['vehicles']['Update']
-
-export type Booking = Database['public']['Tables']['bookings']['Row']
-export type BookingInsert = Database['public']['Tables']['bookings']['Insert']
-export type BookingUpdate = Database['public']['Tables']['bookings']['Update']
-
-export type Conversation = Database['public']['Tables']['conversations']['Row']
-export type ConversationInsert = Database['public']['Tables']['conversations']['Insert']
-export type ConversationUpdate = Database['public']['Tables']['conversations']['Update']
-
-export type Message = Database['public']['Tables']['messages']['Row']
-export type MessageInsert = Database['public']['Tables']['messages']['Insert']
-export type MessageUpdate = Database['public']['Tables']['messages']['Update']
-
-export type UserProfile = Database['public']['Tables']['user_profiles']['Row']
-export type UserProfileInsert = Database['public']['Tables']['user_profiles']['Insert']
-export type UserProfileUpdate = Database['public']['Tables']['user_profiles']['Update']
-
-export type VehicleAvailability = Database['public']['Tables']['vehicle_availability']['Row']
-export type VehicleAvailabilityInsert = Database['public']['Tables']['vehicle_availability']['Insert']
-export type VehicleAvailabilityUpdate = Database['public']['Tables']['vehicle_availability']['Update']
 

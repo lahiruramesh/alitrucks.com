@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
-import { Vehicle } from '@/types/database'
+import { Database } from '@/types/database'
 import { useAuth } from '@/hooks/useAuth'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CheckCircle, XCircle, Clock, Edit, Eye, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
+
+type Vehicle = Database['public']['Tables']['vehicles']['Row']
 
 type VehicleWithDetails = Vehicle & {
   brands: {

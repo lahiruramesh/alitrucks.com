@@ -10,24 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { CreditCard, Shield, CalendarIcon } from 'lucide-react'
 import { differenceInDays } from 'date-fns'
-
-interface BookingData {
-  id: string
-  total_amount: number
-  start_date: string
-  end_date: string
-  special_requests?: string | null
-  buyer_id: string
-  vehicle_id: number
-  seller_id: string
-  status?: string
-  created_at?: string | null
-  updated_at?: string | null
-  confirmed_at?: string | null
-  cancelled_at?: string | null
-  completed_at?: string | null
-  cancellation_reason?: string | null
-}
+import { StripePaymentForm } from '@/components/StripePaymentForm'
 
 interface BookingWithStripeProps {
   vehicle: {
@@ -55,6 +38,9 @@ interface BookingFormData {
 export default function BookingWithStripe({ vehicle }: BookingWithStripeProps) {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [paymentStep, setPaymentStep] = useState(false)
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null)
   const [formData, setFormData] = useState<BookingFormData>({
     startDate: '',
     endDate: '',
@@ -88,25 +74,29 @@ export default function BookingWithStripe({ vehicle }: BookingWithStripeProps) {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const createStripePaymentIntent = async (bookingData: BookingData) => {
+  const createStripePaymentIntent = async () => {
     try {
-      // Create payment intent via Supabase Edge Function
-      const { data: paymentIntent, error: paymentError } = await supabase.functions.invoke('create-payment-intent', {
-        body: {
-          amount: totalAmount * 100, // Convert to cents
-          currency: 'usd',
-          customer_email: user?.email,
-          metadata: {
-            booking_id: bookingData.id,
-            vehicle_id: vehicle.id,
-            renter_id: user?.id,
-            seller_id: vehicle.seller_id
-          }
-        }
+      const response = await fetch('/api/payments/create-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          vehicleId: vehicle.id,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          totalAmount: totalAmount,
+          customerEmail: user?.email,
+          customerName: user?.user_metadata?.full_name || user?.email,
+        }),
       })
 
-      if (paymentError) throw paymentError
-      return paymentIntent
+      if (!response.ok) {
+        throw new Error('Failed to create payment intent')
+      }
+
+      const { clientSecret, paymentIntentId } = await response.json()
+      return { clientSecret, paymentIntentId }
 
     } catch (error) {
       console.error('Error creating payment intent:', error)
@@ -133,9 +123,32 @@ export default function BookingWithStripe({ vehicle }: BookingWithStripeProps) {
     setLoading(true)
 
     try {
-      // Create booking record with proper types
+      // Create Stripe payment intent first
+      const paymentIntent = await createStripePaymentIntent()
+      
+      if (paymentIntent?.clientSecret) {
+        // Store payment intent in state to proceed to payment
+        setPaymentStep(true)
+        setClientSecret(paymentIntent.clientSecret)
+        setPaymentIntentId(paymentIntent.paymentIntentId)
+      }
+
+    } catch (error) {
+      console.error('Booking error:', error)
+      alert('Failed to initiate payment. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePaymentSuccess = async () => {
+    if (!paymentIntentId) return
+
+    setLoading(true)
+    try {
+      // Create booking record after successful payment
       const bookingData = {
-        buyer_id: user.id,
+        buyer_id: user!.id,
         seller_id: vehicle.seller_id,
         vehicle_id: vehicle.id,
         start_date: formData.startDate,
@@ -154,8 +167,10 @@ export default function BookingWithStripe({ vehicle }: BookingWithStripeProps) {
         service_fee: serviceFee,
         taxes: taxes,
         total_amount: totalAmount,
-        status: 'pending' as const,
-        payment_status: 'pending' as const
+        status: 'confirmed' as const,
+        payment_status: 'paid' as const,
+        stripe_payment_intent_id: paymentIntentId,
+        confirmed_at: new Date().toISOString()
       }
 
       const { data: booking, error: bookingError } = await supabase
@@ -166,33 +181,26 @@ export default function BookingWithStripe({ vehicle }: BookingWithStripeProps) {
 
       if (bookingError) throw bookingError
 
-      // Create Stripe payment intent
-      const paymentIntent = await createStripePaymentIntent(booking)
+      alert('Booking confirmed! Payment processed successfully.')
       
-      // For demo purposes, simulate successful payment
-      // In production, this would be handled by Stripe webhooks
-      if (paymentIntent?.client_secret) {
-        await supabase
-          .from('bookings')
-          .update({ 
-            status: 'confirmed' as const,
-            confirmed_at: new Date().toISOString(),
-            payment_status: 'paid' as const
-          })
-          .eq('id', booking.id)
-
-        alert('Booking confirmed! Payment processed successfully.')
-        
-        // Redirect to booking confirmation page
-        window.location.href = `/buyer/bookings?booking=${booking.id}`
-      }
+      // Redirect to booking confirmation page
+      window.location.href = `/buyer/bookings?booking=${booking.id}`
 
     } catch (error) {
-      console.error('Booking error:', error)
-      alert('Failed to create booking. Please try again.')
+      console.error('Booking creation error:', error)
+      alert('Payment succeeded but failed to create booking record. Please contact support.')
     } finally {
       setLoading(false)
     }
+  }
+
+  const handlePaymentError = (error: string) => {
+    console.error('Payment error:', error)
+    alert(`Payment failed: ${error}`)
+    // Reset to booking form
+    setPaymentStep(false)
+    setClientSecret(null)
+    setPaymentIntentId(null)
   }
 
   const isFormValid = formData.startDate && 
@@ -202,6 +210,40 @@ export default function BookingWithStripe({ vehicle }: BookingWithStripeProps) {
 
   // Get minimum date (today)
   const today = new Date().toISOString().split('T')[0]
+
+  // If we're in payment step, show payment form
+  if (paymentStep && clientSecret) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold mb-2">Complete Your Payment</h3>
+          <p className="text-gray-600">
+            Booking {vehicle.name} for {totalDays} day{totalDays > 1 ? 's' : ''}
+          </p>
+        </div>
+        
+        <StripePaymentForm
+          clientSecret={clientSecret}
+          onSuccess={handlePaymentSuccess}
+          onError={handlePaymentError}
+          amount={totalAmount}
+          loading={loading}
+        />
+        
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            setPaymentStep(false)
+            setClientSecret(null)
+            setPaymentIntentId(null)
+          }}
+          className="w-full"
+        >
+          Back to Booking Form
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <Card className="w-full">

@@ -20,7 +20,8 @@ import {
   X,
   Plus,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Calendar
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { useAuthContext } from '@/components/auth/AuthProvider'
@@ -100,6 +101,14 @@ export default function NewVehiclePage() {
   // Image state
   const [images, setImages] = useState<ImageFile[]>([])
   const [primaryImageId, setPrimaryImageId] = useState<string>('')
+
+  // Availability state
+  const [availabilityPeriods, setAvailabilityPeriods] = useState<{
+    startDate: string
+    endDate: string
+    specialPrice?: string
+    notes?: string
+  }[]>([])
 
   // UI state
   const [loading, setLoading] = useState(false)
@@ -188,6 +197,25 @@ export default function NewVehiclePage() {
     })
   }
 
+  const addAvailabilityPeriod = () => {
+    setAvailabilityPeriods(prev => [...prev, {
+      startDate: '',
+      endDate: '',
+      specialPrice: '',
+      notes: ''
+    }])
+  }
+
+  const updateAvailabilityPeriod = (index: number, field: string, value: string) => {
+    setAvailabilityPeriods(prev => prev.map((period, i) => 
+      i === index ? { ...period, [field]: value } : period
+    ))
+  }
+
+  const removeAvailabilityPeriod = (index: number) => {
+    setAvailabilityPeriods(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
 
@@ -274,6 +302,32 @@ export default function NewVehiclePage() {
     await Promise.all(uploadPromises)
   }
 
+  const saveAvailabilityPeriods = async (vehicleId: number) => {
+    if (availabilityPeriods.length === 0) return
+
+    const validPeriods = availabilityPeriods.filter(period => 
+      period.startDate && period.endDate && 
+      new Date(period.startDate) <= new Date(period.endDate)
+    )
+
+    if (validPeriods.length === 0) return
+
+    const availabilityData = validPeriods.map(period => ({
+      vehicle_id: vehicleId,
+      start_date: period.startDate,
+      end_date: period.endDate,
+      is_available: true,
+      special_price_per_day: period.specialPrice ? parseFloat(period.specialPrice) : null,
+      notes: period.notes || null
+    }))
+
+    const { error: availabilityError } = await supabase
+      .from('vehicle_availability')
+      .insert(availabilityData)
+
+    if (availabilityError) throw availabilityError
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -347,6 +401,9 @@ export default function NewVehiclePage() {
 
       // Upload images
       await uploadImages(vehicle.id)
+
+      // Save availability periods
+      await saveAvailabilityPeriods(vehicle.id)
 
       // Notify admins of new vehicle submission
       await createNotification(
@@ -699,6 +756,110 @@ export default function NewVehiclePage() {
                 />
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Availability Periods */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Vehicle Availability</CardTitle>
+            <CardDescription>
+              Set when your vehicle is available for rent. This helps buyers see available dates and make bookings.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-gray-600">
+                Add availability periods to let customers know when your vehicle can be rented.
+              </p>
+              <Button
+                type="button"
+                onClick={addAvailabilityPeriod}
+                variant="outline"
+                size="sm"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Period
+              </Button>
+            </div>
+
+            {availabilityPeriods.length === 0 && (
+              <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500 mb-2">No availability periods set</p>
+                <p className="text-sm text-gray-400">
+                  Add availability periods to help customers find your vehicle
+                </p>
+              </div>
+            )}
+
+            {availabilityPeriods.map((period, index) => (
+              <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium">Availability Period {index + 1}</h4>
+                  <Button
+                    type="button"
+                    onClick={() => removeAvailabilityPeriod(index)}
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor={`start-date-${index}`}>Start Date *</Label>
+                    <Input
+                      id={`start-date-${index}`}
+                      type="date"
+                      value={period.startDate}
+                      onChange={(e) => updateAvailabilityPeriod(index, 'startDate', e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="ring-gray-200 border-gray-200 focus:ring-gray-300 focus:border-gray-300"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`end-date-${index}`}>End Date *</Label>
+                    <Input
+                      id={`end-date-${index}`}
+                      type="date"
+                      value={period.endDate}
+                      onChange={(e) => updateAvailabilityPeriod(index, 'endDate', e.target.value)}
+                      min={period.startDate || new Date().toISOString().split('T')[0]}
+                      className="ring-gray-200 border-gray-200 focus:ring-gray-300 focus:border-gray-300"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor={`special-price-${index}`}>Special Price ($/day)</Label>
+                    <Input
+                      id={`special-price-${index}`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={period.specialPrice || ''}
+                      onChange={(e) => updateAvailabilityPeriod(index, 'specialPrice', e.target.value)}
+                      placeholder="Optional - leave empty to use default price"
+                      className="ring-gray-200 border-gray-200 focus:ring-gray-300 focus:border-gray-300"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`notes-${index}`}>Notes</Label>
+                    <Input
+                      id={`notes-${index}`}
+                      value={period.notes || ''}
+                      onChange={(e) => updateAvailabilityPeriod(index, 'notes', e.target.value)}
+                      placeholder="Optional notes for this period"
+                      className="ring-gray-200 border-gray-200 focus:ring-gray-300 focus:border-gray-300"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
 

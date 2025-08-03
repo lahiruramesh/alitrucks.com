@@ -9,7 +9,9 @@ import DatabaseFilters from '@/components/DatabaseFilters'
 import TruckSort, { SortOption } from '@/components/TruckSort'
 import { Suspense, useState, useMemo, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
-import { Vehicle } from '@/types/database'
+import { Database } from '@/types/database'
+
+type Vehicle = Database['public']['Tables']['vehicles']['Row']
 
 type VehicleWithDetails = Vehicle & {
   brands: {
@@ -52,7 +54,20 @@ export default function Home() {
     maxCapacity: ''
   })
   const [sortBy, setSortBy] = useState<SortOption>('price-low')
+  const [showFilters, setShowFilters] = useState(false)
   const supabase = createClient()
+
+  // Scroll detection for showing filters
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY
+      const triggerPoint = 400 // Show filters after scrolling 400px
+      setShowFilters(scrollY > triggerPoint)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // Fetch approved vehicles from the database with filters
   const fetchVehicles = useCallback(async () => {
@@ -209,11 +224,19 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Filters Sidebar */}
-          <div className="lg:col-span-1">
-            <DatabaseFilters 
-              onFiltersChange={handleFiltersChange}
-              onSearch={handleSearch}
-            />
+          <div className={`lg:col-span-1 transition-all duration-300 ${
+            showFilters 
+              ? 'lg:sticky lg:top-6 lg:h-fit' 
+              : 'opacity-0 lg:opacity-100'
+          }`}>
+            <div className={`transition-all duration-300 ${
+              showFilters ? 'block' : 'hidden lg:block'
+            }`}>
+              <DatabaseFilters 
+                onFiltersChange={handleFiltersChange}
+                onSearch={handleSearch}
+              />
+            </div>
           </div>
 
           {/* Main Content */}

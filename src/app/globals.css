@@ -361,6 +361,19 @@
     z-index: 9999 !important;
   }
   
+  /* Dropdown and context menu backgrounds */
+  [data-radix-dropdown-content],
+  [data-radix-context-menu-content],
+  [data-radix-select-content],
+  [data-radix-menubar-content],
+  [data-radix-tooltip-content] {
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    z-index: 9999 !important;
+  }
+  
   [data-slot="select-item"] {
     background: white !important;
   }

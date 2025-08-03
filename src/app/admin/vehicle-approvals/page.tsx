@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
-import { Vehicle } from '@/types/database'
+import { Database } from '@/types/database'
 import { useAdminNotifications } from '@/hooks/useAdminNotifications'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CheckCircle, XCircle } from 'lucide-react'
 import TruckDetailGallery from '@/components/TruckDetailGallery'
+
+type Vehicle = Database['public']['Tables']['vehicles']['Row']
 
 type VehicleWithSeller = Vehicle & {
   user_profiles: {

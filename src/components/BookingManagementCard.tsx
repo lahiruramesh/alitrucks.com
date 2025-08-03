@@ -4,7 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar, MapPin, Clock, DollarSign, MessageSquare, Star } from 'lucide-react'
-import { Booking } from '@/types/database'
+import { Database } from '@/types/database'
+
+type Booking = Database['public']['Tables']['bookings']['Row']
 
 interface BookingManagementCardProps {
   booking: Booking

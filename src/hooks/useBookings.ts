@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from './useAuth'
-import { Booking } from '@/types/database'
+import { useAuth } from '@/hooks/useAuth'
+import { Database } from '@/types/database'
+
+type Booking = Database['public']['Tables']['bookings']['Row']
 
 interface UseBookingsOptions {
   role?: 'buyer' | 'seller' | 'all'

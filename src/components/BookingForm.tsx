@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Booking } from '@/types/database'
+import { Database } from '@/types/database'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+
+type Booking = Database['public']['Tables']['bookings']['Row']
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
